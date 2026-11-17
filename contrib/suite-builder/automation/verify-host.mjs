@@ -56,6 +56,14 @@ export default async function verifyHost({node,payload,profile,resources,env,plu
       if(!JSON.stringify(ready.injections).includes(plugin.name))throw Error(`缺少 ${plugin.name} 的客户端注入`);
       checks.push({name:plugin.name+'-client-registered',status:'passed'});
     }
+    const injectionText=JSON.stringify(ready.injections).replace(/%[0-9a-f]{2}/gi,m=>String.fromCharCode(parseInt(m.slice(1),16)));
+    for(const plugin of plugins){
+      const metadata=JSON.parse(fs.readFileSync(path.join(profile,'node_modules',plugin.name,'package.json')));
+      if(metadata.dsh?.client){
+        if(!injectionText.includes(plugin.name))throw Error('Client injection not registered: '+plugin.name);
+        checks.push({name:plugin.name+'-client-injection',status:'passed'});
+      }
+    }
     return checks;
   } finally {
     if(child.connected)child.send({type:'shutdown'});

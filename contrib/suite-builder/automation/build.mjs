@@ -195,15 +195,15 @@ async function main() {
   fs.mkdirSync(deps,{recursive:true});
   fs.writeFileSync(path.join(deps,'package.json'),JSON.stringify({name:'dsh-suite-runtimes',version:'1.0.0',private:true,dependencies:rules.npmRuntimes},null,2));
   await run(process.execPath,[npm,'install','--omit=dev','--include=optional','--no-audit','--no-fund','--foreground-scripts'],{cwd:deps});
-  const orbZip=path.join(root,rules.orb.cache);
+  const orbZip=selected.has('dsh-orb')?path.join(root,rules.orb.cache):null;
   if(selected.has('dsh-orb')) {await download(rules.orb.url,orbZip,rules.orb.sha256);await run(seven,['x','-y',`-o${path.join(deps,'orb-electron')}`,orbZip],{capture:true});}
   const gitZip=path.join(root,rules.git.cache);await download(rules.git.url,gitZip,rules.git.sha256);
   await run(seven,['x','-y',`-o${path.join(deps,'git')}`,gitZip],{capture:true});
   const bin=path.join(deps,'bin');fs.mkdirSync(bin,{recursive:true});
-  const codexFiles=files(path.join(deps,'node_modules/@openai')).filter(p=>path.basename(p)==='codex.exe');
-  if(codexFiles.length!==1)throw Error('未找到唯一 Codex 平台二进制');
   // Keep npm's native files in place so wrappers and direct CLI calls share one copy.
-  const nativeCommands={node,'lark-cli':path.join(deps,'node_modules/@larksuite/cli/bin/lark-cli.exe'),bun:path.join(deps,'node_modules/bun/bin/bun.exe'),codex:codexFiles[0]};
+  const nativeCommands={node,'lark-cli':path.join(deps,'node_modules/@larksuite/cli/bin/lark-cli.exe'),bun:path.join(deps,'node_modules/bun/bin/bun.exe')};
+  if(fs.existsSync(path.join(deps,'node_modules/@openai/codex'))||fs.existsSync(path.join(bin,'codex.exe'))||fs.existsSync(path.join(deps,'orb-electron'))||selected.has('dsh-orb'))throw Error('Unexpected Codex CLI or Orb in slim package');
+  report.checks.push({name:'slim-no-orb-no-codex-cli',status:'passed'});
   const nativeDirs=[...new Set(Object.values(nativeCommands).map(file=>path.dirname(file)))];
   for(const [name,canonical] of Object.entries(nativeCommands)) {
     const oldCopy=path.join(bin,name+'.exe');
@@ -221,8 +221,8 @@ async function main() {
   const pkgFile=path.join(payload,'package.json');const pkg=JSON.parse(fs.readFileSync(pkgFile));pkg.version=rules.version;pkg.dshSuite.plugins=report.plugins.map(p=>p.name);fs.writeFileSync(pkgFile,JSON.stringify(pkg,null,2));
   const cmd=path.join(resources,'runtime/cli/bin/dsh.cmd');fs.writeFileSync(cmd,fs.readFileSync(cmd,'utf8').replaceAll('app.asar','app'));
   const cleanEnv={...env,PATH:[bin,...nativeDirs,path.join(process.env.SystemRoot,'System32'),process.env.SystemRoot].join(';')};
-  for(const name of ['lark-cli','codex','bun']) {const result=await run(nativeCommands[name],['--version'],{env:cleanEnv,capture:true,timeout:30000});report.checks.push({name:name+'-bundled-launch',status:'passed',output:result.output.trim()});}
-  const pathProbe="const {spawnSync}=require('node:child_process');for(const name of ['codex','bun','lark-cli']){const r=spawnSync(name,['--version'],{encoding:'utf8',env:process.env});if(r.error||r.status!==0)throw r.error||Error(name+' failed');console.log(name+': '+r.stdout.trim())}";
+  for(const name of ['lark-cli','bun']) {const result=await run(nativeCommands[name],['--version'],{env:cleanEnv,capture:true,timeout:30000});report.checks.push({name:name+'-bundled-launch',status:'passed',output:result.output.trim()});}
+  const pathProbe="const {spawnSync}=require('node:child_process');for(const name of ['bun','lark-cli']){const r=spawnSync(name,['--version'],{encoding:'utf8',env:process.env});if(r.error||r.status!==0)throw r.error||Error(name+' failed');console.log(name+': '+r.stdout.trim())}";
   await run(node,['-e',pathProbe],{cwd:runRoot,env:cleanEnv,capture:true,timeout:60000});
   report.checks.push({name:'deduplicated-native-PATH-launch',status:'passed'});
   {const result=await run(path.join(deps,'git/cmd/git.exe'),['--version'],{env:cleanEnv,capture:true,timeout:30000});report.checks.push({name:'git-bundled-launch',status:'passed',output:result.output.trim()});}

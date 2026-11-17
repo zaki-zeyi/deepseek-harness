@@ -2,6 +2,8 @@ name: Community suite packages
 
 on:
   push:
+    branches-ignore:
+      - codex/windows-slim-*
     paths:
       - contrib/suite-builder/**
       - .github/workflows/suite-package.yml

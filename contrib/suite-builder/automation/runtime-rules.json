@@ -2,18 +2,40 @@
   "schemaVersion": 1,
   "version": "1.1.0",
   "target": "win32-x64",
-  "reviewedPlugins": ["dsh-brand", "dshmarket", "@xmanrui/dsh-im", "dsh-orb", "dsh-our-free-model", "dsh-industry-research", "dsh-codex-subscription"],
+  "reviewedPlugins": [
+    "dsh-brand",
+    "dshmarket",
+    "@xmanrui/dsh-im",
+    "dsh-orb",
+    "dsh-our-free-model",
+    "dsh-industry-research",
+    "dsh-codex-subscription"
+  ],
   "reviewedVersions": {
-    "dsh-brand": ["0.2.0-rc.6"],
-    "dshmarket": ["1.73.19"],
-    "@xmanrui/dsh-im": ["5.10.0"],
-    "dsh-orb": ["0.2.1"],
-    "dsh-our-free-model": ["2.8.3"],
-    "dsh-industry-research": ["0.8.13", "0.13.2"],
-    "dsh-codex-subscription": ["3.2.19"]
+    "dsh-brand": [
+      "0.2.0-rc.6"
+    ],
+    "dshmarket": [
+      "1.73.19"
+    ],
+    "@xmanrui/dsh-im": [
+      "5.10.0"
+    ],
+    "dsh-orb": [
+      "0.2.1"
+    ],
+    "dsh-our-free-model": [
+      "2.8.3"
+    ],
+    "dsh-industry-research": [
+      "0.8.13",
+      "0.13.2"
+    ],
+    "dsh-codex-subscription": [
+      "3.2.19"
+    ]
   },
   "npmRuntimes": {
-    "@openai/codex": "0.169.0",
     "@larksuite/cli": "1.0.100",
     "bun": "1.4.4"
   },

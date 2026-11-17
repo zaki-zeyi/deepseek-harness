@@ -8,10 +8,9 @@ GitHub 地址优先使用仓库 package.json 对应的 npm 已发布版本；不
 seed:dsh-brand
 seed:dshmarket
 seed:@xmanrui/dsh-im
-seed:dsh-orb
 seed:dsh-our-free-model
 seed:dsh-industry-research
-https://github.com/WSL043/dsh-codex-subscription
+dsh-codex-subscription@3.2.19
 ```
 
 提交并推送此列表后，GitHub Actions 自动测试 Windows x64 和 macOS arm64 打包；插件更新期间仅上传报告。准备交付时，将 automation/ci-settings.json 的 publishInstallers 设为 true，即可自动上传安装包。Intel Mac 暂缓。本机已准备输入时，也可双击“一键打包.cmd”或“监听插件列表.cmd”。
