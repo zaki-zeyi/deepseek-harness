@@ -33,6 +33,8 @@ jobs:
       - run: npm test
       - run: node automation/ci-bootstrap.mjs win32-x64
       - run: node automation/build.mjs
+      - name: Verify installer single instance with real EXE
+        run: ./automation/verify-installer-single-instance.ps1
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: windows-slim-${{ github.run_number }}

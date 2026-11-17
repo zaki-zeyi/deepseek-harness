@@ -9,7 +9,7 @@ if(packages.length!==1||reports.length!==1)throw Error('Expected one Windows ins
 const report=JSON.parse(fs.readFileSync(reports[0]));
 const selected=new Map(report.plugins.map(p=>[p.name,p.version]));
 if(report.target!=='win32-x64'||report.status!=='built'||selected.has('dsh-orb')||selected.get('dsh-codex-subscription')!=='3.2.19'||selected.get('dsh-industry-research')!=='0.13.2')throw Error('Unexpected plugin selection');
-for(const name of ['slim-no-orb-no-codex-cli','industry-research-registered-and-ready','dsh-codex-subscription-client-registered','deduplicated-native-PATH-launch','native-module-launch','installer-archive-integrity']){
+for(const name of ['slim-no-orb-no-codex-cli','industry-research-registered-and-ready','dsh-codex-subscription-client-registered','deduplicated-native-PATH-launch','native-module-launch','installer-archive-integrity','installer-single-instance']){
   if(!report.checks.some(c=>c.name===name&&c.status==='passed'))throw Error('Required check not passed: '+name);
 }
 const h=crypto.createHash('sha256');for await(const chunk of fs.createReadStream(packages[0]))h.update(chunk);
