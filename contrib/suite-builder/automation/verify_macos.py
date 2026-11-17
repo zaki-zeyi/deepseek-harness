@@ -21,6 +21,7 @@ for arch in sys.argv[1:] or ('arm64','x64'):
         with zipfile.ZipFile(io.BytesIO(z.read(ROOT+'seed-profile.zip'))) as seed:
             native=[f'node_modules/@img/sharp-darwin-{arch}/lib/sharp-darwin-{arch}-0.35.5.node',f'node_modules/@img/sharp-libvips-darwin-{arch}/lib/libvips-cpp.8.18.7.dylib',f'node_modules/@tencent-qqmail/agently-cli-darwin-{arch}/bin/agently-cli',f'node_modules/dsh-industry-research/node_modules/node-pty/prebuilds/darwin-{arch}/pty.node',f'node_modules/dsh-our-free-model/vendor/magpie/bin/magpie-darwin-{arch}']
             for p in native:
+                if p not in seed.namelist() and 'dsh-industry-research/node_modules/node-pty' in p:p=p.replace('dsh-industry-research/node_modules/','')
                 with seed.open(p) as f:b=f.read(8)
                 if b[:4]!=b'\xcf\xfa\xed\xfe' or struct.unpack('<I',b[4:8])[0]!=expected:raise RuntimeError('Wrong native dependency architecture: '+p)
             if seed.testzip():raise RuntimeError('Profile ZIP corruption')

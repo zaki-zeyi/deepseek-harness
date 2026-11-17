@@ -3,32 +3,32 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write contrib/suite-builder/README.md
 /:
-  en: ac5e023be543e6d3
-  zh: 693b69a5d1254caa
+  en: 5e142bcf4bd73c63
+  zh: 591b7868443aa77c
 /community-suite-builder:
   en: ee67b9bef598aabf
   zh: c3f1bc2befbed9df
 /community-suite-builder/summary:
-  en: 220d4e1df958e7b1
-  zh: 985bafdd513cf884
+  en: 995c6f90e1a140de
+  zh: 3e815b45d404d3fe
 /community-suite-builder/table-of-contents:
   en: b5792dc326fa314d
   zh: 1a84cd3526d38f72
 /community-suite-builder/build-tutorial:
-  en: 72ac3a13f1bd12a0
-  zh: 0e8e1500e506347c
+  en: 70a5aef94b0f3386
+  zh: 23e723b5e9d47526
 /community-suite-builder/runtime-rules:
-  en: d0ae896ef72d307c
-  zh: bbd2095838bdc681
+  en: 1c2eabf40ddc2935
+  zh: af94a525f02591c7
 /community-suite-builder/model-experience:
   en: 867b7d1c745ca258
   zh: cd08ce10c7f5d6b7
 /community-suite-builder/known-limitations:
-  en: eaf3bc62cb26ff9f
-  zh: 2cb16161be0ae53e
+  en: 2a29d694f45e2df1
+  zh: 893aa083a73054e1
 /community-suite-builder/developer-checks:
-  en: e5bff9fa6dc55523
-  zh: 1d951dfbc938468f
+  en: 9df369210dd225a2
+  zh: 650cda53ff2ed824
 /community-suite-builder/dev-note:
   en: b75c8458928b72b9
   zh: 45e76642489dcc3c

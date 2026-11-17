@@ -1,5 +1,5 @@
 ---
-description: "Prepare community Harness desktop installers from plugin lists and existing desktop templates."
+description: "Build community Harness installers with plugins and runtimes on GitHub Actions."
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This independent tool packages prepared Harness desktop templates with the plugins in [plugins.md](plugins.md). It does not change the monorepo build.
+This independent tool packages Harness desktop apps with the plugins in [plugins.md](plugins.md), including their npm dependencies and reviewed external runtimes.
 
 ## Table of Contents
 
@@ -23,16 +23,16 @@ This independent tool packages prepared Harness desktop templates with the plugi
 <a id="build-tutorial"></a>
 ## Build tutorial
 
-1. Use Windows x64 with Node.js 24.9+. Run `npm install` here, then `npm --prefix tools install`.
-2. Copy `inputs.example.json` to ignored `inputs.local.json`. Supply a prepared Windows app and materialized desktop Profile. The app needs the suite seed loader and bundled DSH/Node/pnpm support files; a stock executable alone is insufficient.
-3. Edit the single `dsh-plugins` block in `plugins.md`: use an npm version, a GitHub repository with matching published npm metadata, or `seed:<name>` to retain an existing dependency.
-4. Run `npm run plan`, then `npm run build`. `npm run watch` rebuilds on list changes. Installers and reports appear under `dist/automated`; Windows installation supports a custom directory.
-5. For Mac cross-packaging, supply each prepared Mac app and existing suite baseline ZIP. Set `windowsStaging` to a successful Windows staging directory, or leave it unset to select the latest successful build. Run `打包macOS.cmd`.
+1. Edit the single `dsh-plugins` block in `plugins.md`: use an npm package, a pinned npm version, a GitHub repository with matching published npm metadata, or `seed:<name>` for a pinned preset from `automation/ci-inputs.json`.
+2. Push the list to GitHub. The [suite workflow](../../.github/workflows/suite-package.yml) also runs when builder files change and supports manual dispatch after it reaches the default branch.
+3. The workflow downloads SHA-512-verified official desktop inputs, creates a fresh Profile through the DSH plugin manager, resolves dependencies and required peers, and bundles the reviewed runtimes. It uses native Windows x64, Mac arm64 and Mac x64 runners.
+4. Download `suite-win32-x64-*`, `suite-darwin-arm64-*` and `suite-darwin-x64-*` from the successful Actions run. Each contains an installer, a report and SHA-256 checksums. Artifacts are retained for three days. Windows produces an `.exe`; each Mac ZIP includes an app and installation/signing scripts. Both support a custom installation location.
+5. For local builds, run `npm ci` and `npm --prefix tools ci` on the target OS with Node.js 24.9+. Run `node automation/ci-bootstrap.mjs` before `npm run build` on Windows. On Mac, install Python 3.12 and Go 1.27.1, bootstrap, then run `python3 automation/build_macos.py arm64` (or `x64`), `python3 automation/verify_macos.py arm64` and `node automation/ci-mac-smoke.mjs arm64` with the matching architecture. Bootstrap requires fresh staging; prepared input overrides remain available through `inputs.example.json`.
 
 <a id="runtime-rules"></a>
 ## Runtime rules
 
-[Runtime rules](automation/runtime-rules.json) pin reviewed plugin versions and additional binaries. npm dependencies and missing required peers are resolved automatically. Unknown external processes require an adapter; new peer version conflicts stop the build. Existing seed peer warnings remain in reports and require host registration checks.
+[Runtime rules](automation/runtime-rules.json) pin reviewed plugin versions and additional binaries. npm dependencies and missing required peers are resolved automatically. A newly detected external program requires a runtime adapter; an unreviewed version or a new peer conflict stops the build. Existing preset peer warnings remain in reports. Arbitrary README installation commands are never executed. To retain a version, pin it in the list; changing a repository README alone does not trigger this repository's workflow.
 
 <a id="model-experience"></a>
 ## Model Experience
@@ -42,14 +42,14 @@ The builder adds no model tools or prompts. Included plugins determine the insta
 <a id="known-limitations"></a>
 ## Known Limitations
 
-Templates, plugin payloads, runtime downloads, installers, user Profiles and credentials are excluded from Git. A clean clone needs the prepared inputs above; this is not a bootstrap from upstream source and does not configure GitHub Actions.
-Windows probes cover bundled CLI startup, native modules and Desktop Host registration. Mac checks on Windows cover binary architecture, ZIP CRC, executable modes and Framework links; actual startup, signing and permissions require a Mac. Mac installation performs local ad-hoc signing; Git features require Apple Command Line Tools.
+Desktop templates, plugin payloads, runtime downloads, installers, user Profiles and credentials are excluded from Git. CI prepares its own inputs from the pinned public sources; no personal Profile or account token is needed. A failed download, dependency guard or runtime check prevents publishing an installer.
+Windows probes cover bundled CLI startup, native modules and Desktop Host registration. Mac checks cover ZIP integrity, architecture, executable modes and Framework links; native runners also exercise bundled CLIs, Electron, sharp and node-pty. Mac GUI interaction and account authorization are not automated. Mac installation performs local ad-hoc signing without Apple notarization; Git features require Apple Command Line Tools.
 Users authorize their own accounts. Existing nonempty desktop Profiles are preserved, so upgrades do not inject new plugins into an existing Profile. Orb initialization warnings remain in reports.
 
 <a id="developer-checks"></a>
 ## Developer checks
 
-Run `npm test` for list parsing and staging-path checks. Syntax/import checks for this source import do not replace complete installer or Mac runtime acceptance.
+Run `npm test` for list parsing, staging boundaries, download failures, subprocess failures and existing-profile protection. Actions additionally builds and checks each platform's actual package; successful unit tests alone do not establish installer acceptance.
 
 <a id="dev-note"></a>
 ## Dev Note

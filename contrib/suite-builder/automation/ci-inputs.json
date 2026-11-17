@@ -1,0 +1,27 @@
+{
+  "cores": {
+    "win32-x64": {
+      "version": "0.2.2-rc.3",
+      "url": "https://download.deepseek.com/dsh-desk/bin/win-x64/deepseek-harness-0.2.2-rc.3-win-x64.exe",
+      "sha512": "GiJf8kx+C7eoiZ0xQSYBcTyh5xmXQl+vh63U6uSm963McK1AkMgB8PydzuekWdUY7hyURvhVMHANM4pn+tCKzQ=="
+    },
+    "darwin-arm64": {
+      "version": "0.2.2-rc.3",
+      "url": "https://download.deepseek.com/dsh-desk/bin/mac-arm64/deepseek-harness-0.2.2-rc.3-mac-arm64.zip",
+      "sha512": "UThWXKCqiiUnjFgij655+Gc1MgiSl+Ybl71jkQi48BhcBCN0XSDNT4GGmGJY3nvEqnkLT3LtWbL6wy6t/kRxIw=="
+    },
+    "darwin-x64": {
+      "version": "0.2.1-rc.4",
+      "url": "https://download.deepseek.com/dsh-desk/bin/mac-x64/deepseek-harness-0.2.1-rc.4-mac-x64.zip",
+      "sha512": "QGjNHmZbT7ZG6i/laeUYvoZ0yc/uypdnCr6rOzCSJrgIPQOvq1523CBdrFpmcvoSF4E6URAW3yV+h54JF3UhaA=="
+    }
+  },
+  "seedSources": {
+    "dsh-brand": {"version":"0.2.0-rc.6","spec":"https://codeload.github.com/advance-lion/dsh-brand/tar.gz/85b77a5398d82b0ae65ff6344ae81de5e6658742"},
+    "dshmarket": {"version":"1.73.19","spec":"dshmarket@1.73.19"},
+    "@xmanrui/dsh-im": {"version":"5.10.0","spec":"@xmanrui/dsh-im@5.10.0"},
+    "dsh-orb": {"version":"0.2.1","spec":"dsh-orb@0.2.1"},
+    "dsh-our-free-model": {"version":"2.8.3","spec":"https://codeload.github.com/Ebony-Vinyl/dsh-our-free-model/tar.gz/9aa84122b95d80e734c27f05526262580a9c3b4d"},
+    "dsh-industry-research": {"version":"0.8.13","spec":"https://github.com/zaki-zeyi/dsh-industry-research/releases/download/v0.8.13/dsh-industry-research-0.8.13.tgz"}
+  }
+}

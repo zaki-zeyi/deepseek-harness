@@ -28,6 +28,7 @@ BASE.mkdir(parents=True,exist_ok=True);OUT.mkdir(parents=True,exist_ok=True)
 def say(s): print(s,flush=True)
 def longpath(p):
     s=str(pathlib.Path(p).absolute())
+    if os.name!='nt':return pathlib.Path(s)
     return pathlib.Path(s if s.startswith('\\\\?\\') else '\\\\?\\'+s)
 def digest(p):
     h=hashlib.sha256()
@@ -36,7 +37,7 @@ def digest(p):
     return h.hexdigest()
 def run(args,cwd=R,env=None):
     say('RUN '+str(args[0])+' '+str(args[1]))
-    result=subprocess.run([str(x) for x in args],cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',creationflags=subprocess.CREATE_NO_WINDOW)
+    result=subprocess.run([str(x) for x in args],cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
     if result.stdout:say(result.stdout)
     result.check_returncode()
 def get_json(url):
@@ -90,7 +91,7 @@ def npm_payload(name,version,target):
     if base64.b64encode(h.digest()).decode()!=expected:raise RuntimeError('npm integrity mismatch: '+name)
     extract(archive,target)
 def magpie_build():
-    go=BASE/'go-tool/go/bin/go.exe'
+    go=pathlib.Path(shutil.which('go')) if os.name!='nt' and shutil.which('go') else BASE/'go-tool/go/bin/go.exe'
     if not go.exists():
         archive=download('https://go.dev/dl/go1.27.1.windows-amd64.zip','go1.27.1.windows-amd64.zip','a3911b5e0e1b1053f25ed0675f4c1c6aad1e2bfcf253df2b9be4caabd2edd95d')
         extract(archive,BASE/'go-tool')
@@ -101,9 +102,10 @@ def magpie_build():
     marker=BASE/'magpie-patched'
     if not marker.exists():run(['git','apply','--whitespace=nowarn',patch],src);marker.write_text(REV)
     for arch,goarch in [('arm64','arm64'),('x64','amd64')]:
+        if sys.argv[1:] and arch not in sys.argv[1:]:continue
         binary=BASE/f'magpie-darwin-{arch}'
         if not binary.exists():
-            env={**os.environ,'GOOS':'darwin','GOARCH':goarch,'CGO_ENABLED':'0','GOTOOLCHAIN':'local','GOCACHE':str(BASE/'go-cache'),'GOMODCACHE':str(BASE/'go-mod'),'GOWORK':'off','GOPROXY':'https://goproxy.cn,https://goproxy.io,direct'}
+            env={**os.environ,'GOOS':'darwin','GOARCH':goarch,'CGO_ENABLED':'0','GOTOOLCHAIN':'local','GOCACHE':str(BASE/'go-cache'),'GOMODCACHE':str(BASE/'go-mod'),'GOWORK':'off','GOPROXY':os.environ.get('GOPROXY','https://goproxy.cn,https://goproxy.io,direct' if os.name=='nt' else 'https://proxy.golang.org,direct')}
             run([go,'build','-tags','nogui','-trimpath','-buildvcs=true','-ldflags','-s -w -X main.version=ofm-eef99e4bbeba','-o',binary,'.'],src,env)
         macho(binary,arch)
 def macho(file,arch):
@@ -142,17 +144,21 @@ def prepare(arch):
     seed=stage/'seed';app=stage/'app';deps=stage/'dependencies'
     if not (stage/'copied').exists():
         shutil.copytree(longpath(SEED),longpath(seed),ignore=ignore,dirs_exist_ok=True)
-        shutil.copytree(longpath(input_path('macApp'+arch.title(),f'work/mac-{arch}/app')),longpath(app),dirs_exist_ok=True)
+        source_app=longpath(input_path('macApp'+arch.title(),f'work/mac-{arch}/app'))
+        for name in ['package.json','lib/main.js']:
+            dest=app/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source_app/name,dest)
         (stage/'copied').write_text('ok')
     # Refuse a stale plugin selection: this cross build derives from the verified Windows inventory.
     inv=json.loads((WINDOWS_STAGE/'app/resources/suite-inventory.json').read_text('utf-8'))
-    inv['windowsReferenceChecks']=inv.pop('checks',[])
-    inv['windowsReferencePeerWarnings']=inv.pop('legacyPeerWarnings',[])
+    inv['inputReferenceChecks']=inv.pop('checks',[])
+    inv['inputReferencePeerWarnings']=inv.pop('legacyPeerWarnings',[])
     inv['checks']=[{'name':'macOS-runtime-execution','status':'not-run','reason':'Cross-packaged on Windows'}]
     inv.update(target='darwin-'+arch,version=VERSION,validation='static-only; real macOS startup/signing/permissions not tested',systemPrerequisites=['Git features require Apple Command Line Tools (/usr/bin/git); Git is not bundled.'])
     # Target-specific native files already supplied by the multi-architecture profile install.
     for name in ['@img/sharp-darwin-'+arch+'/lib/sharp-darwin-'+arch+'-0.35.5.node','@tencent-qqmail/agently-cli-darwin-'+arch+'/bin/agently-cli','dsh-industry-research/node_modules/node-pty/prebuilds/darwin-'+arch+'/pty.node']:
-        macho(seed/'node_modules'/name,arch)
+        file=seed/'node_modules'/name
+        if not file.exists() and 'dsh-industry-research/node_modules/node-pty' in name:file=seed/'node_modules'/name.replace('dsh-industry-research/node_modules/','')
+        macho(file,arch)
     magpie=seed/'node_modules/dsh-our-free-model/vendor/magpie'
     (magpie/'bin').mkdir(exist_ok=True);shutil.copy2(BASE/f'magpie-darwin-{arch}',magpie/f'bin/magpie-darwin-{arch}')
     meta=json.loads((magpie/'engine.json').read_text('utf-8'));meta['binaries']['darwin-'+arch]={'path':f'bin/magpie-darwin-{arch}','sha256':digest(BASE/f'magpie-darwin-{arch}')};(magpie/'engine.json').write_text(json.dumps(meta,indent=2))

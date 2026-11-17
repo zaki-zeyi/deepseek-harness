@@ -147,8 +147,8 @@ async function main() {
   log('复制不可变的核心模板和独立构建 Profile…');
   if(!resume) {
     fs.cpSync(baseApp,app,{recursive:true});
-    asar.extractAll(path.join(resources,'app.asar'),payload);
-    fs.unlinkSync(path.join(resources,'app.asar'));
+    if(fs.existsSync(path.join(resources,'app.asar'))){asar.extractAll(path.join(resources,'app.asar'),payload);fs.unlinkSync(path.join(resources,'app.asar'));}
+    else if(!fs.existsSync(path.join(payload,'package.json')))throw Error('Prepared desktop payload is missing');
     fs.mkdirSync(path.dirname(profile),{recursive:true});
     fs.cpSync(seedInput,profile,{recursive:true});
   }
@@ -225,7 +225,7 @@ async function main() {
   log('启动真实 Desktop Host，验证插件服务注册…');
   report.checks.push(...await (await import('./verify-host.mjs')).default({node,payload,profile,resources,plugins:report.plugins,logFile:path.join(runRoot,'host-smoke.log'),env:{...cleanEnv,DSH_ORB_ELECTRON_PATH:path.join(deps,'orb-electron/electron.exe'),OUR_FREE_MODEL_BUN:path.join(bin,'bun.exe')}}));
   log('生成插件种子包…');
-  fs.unlinkSync(path.join(resources,'seed-profile.zip'));
+  if(fs.existsSync(path.join(resources,'seed-profile.zip')))fs.unlinkSync(path.join(resources,'seed-profile.zip'));
   await run(seven,['a','-tzip','-mx=6',path.join(resources,'seed-profile.zip'),'.','-xr!.git','-xr!.pnpm','-xr!.bin','-xr!.modules.yaml','-xr!.plugin-manager'],{cwd:profile,capture:true});
   // The previous template zip must not retain files of removed plugins.
   report.stages.push('staged-and-checked');save();
