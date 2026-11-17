@@ -6,6 +6,11 @@ on:
       - contrib/suite-builder/**
       - .github/workflows/suite-package.yml
   workflow_dispatch:
+    inputs:
+      publish_installers:
+        description: Upload installable packages after all checks pass
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,9 +34,6 @@ jobs:
           - target: darwin-arm64
             runner: macos-15
             shell: bash
-          - target: darwin-x64
-            runner: macos-15-intel
-            shell: bash
     defaults:
       run:
         working-directory: contrib/suite-builder
@@ -48,6 +50,16 @@ jobs:
       - uses: actions/setup-node@v7.0.0
         with:
           node-version: '24'
+      - name: Select test or installer publication
+        id: mode
+        env:
+          REQUEST_PUBLISH_INSTALLERS: ${{ inputs.publish_installers }}
+        run: >-
+          node --input-type=module -e "import fs from 'node:fs';
+          const settings=JSON.parse(fs.readFileSync('automation/ci-settings.json'));
+          const publish=process.env.GITHUB_EVENT_NAME==='workflow_dispatch'?process.env.REQUEST_PUBLISH_INSTALLERS==='true':settings.publishInstallers===true;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'publish='+publish+'\n');
+          console.log(publish?'Installer uploads enabled':'Test build only; installer uploads disabled');"
       - uses: actions/setup-python@v6
         if: runner.os == 'macOS'
         with:
@@ -75,7 +87,7 @@ jobs:
           python3 -u automation/verify_macos.py ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
           node automation/ci-mac-smoke.mjs ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
       - name: Upload Windows installer
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && steps.mode.outputs.publish == 'true'
         uses: actions/upload-artifact@v7.0.1
         with:
           name: suite-${{ matrix.target }}-${{ github.run_number }}
@@ -87,7 +99,7 @@ jobs:
             contrib/suite-builder/dist/automated/**/report.json
             contrib/suite-builder/dist/automated/**/SHA256SUMS.txt
       - name: Upload Mac installer
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && steps.mode.outputs.publish == 'true'
         uses: actions/upload-artifact@v7.0.1
         with:
           name: suite-${{ matrix.target }}-${{ github.run_number }}
@@ -98,6 +110,16 @@ jobs:
             contrib/suite-builder/dist/automated/macos-*/*.zip
             contrib/suite-builder/dist/automated/macos-*/report-*.json
             contrib/suite-builder/dist/automated/macos-*/SHA256SUMS.txt
+      - name: Upload test reports
+        if: steps.mode.outputs.publish != 'true'
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: suite-test-report-${{ matrix.target }}-${{ github.run_number }}
+          retention-days: 3
+          if-no-files-found: error
+          path: |
+            contrib/suite-builder/dist/automated/**/report*.json
+            contrib/suite-builder/dist/automated/**/SHA256SUMS.txt
       - name: Upload failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v7.0.1

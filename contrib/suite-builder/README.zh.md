@@ -24,8 +24,8 @@ kind: "package-library"
 ## 构建教程
 
 1. 修改 `plugins.md` 中唯一的 `dsh-plugins` 代码块：填写 npm 包名、固定 npm 版本、具有对应已发布 npm 元数据的 GitHub 仓库，或使用 `seed:<name>` 引用 `automation/ci-inputs.json` 中的固定预设。
-2. 将列表推送到 GitHub。[整合包工作流](../../.github/workflows/suite-package.yml) 也会在打包源码变化时运行；进入默认分支后支持手动触发。
-3. 工作流下载经过 SHA-512 校验的官方桌面输入，通过 DSH 插件管理器创建全新 Profile，解析依赖及必需 peer，再内置已适配的运行程序。分别使用原生 Windows x64、Mac arm64 和 Mac x64 构建机。
+2. 将列表推送到 GitHub。[整合包工作流](../../.github/workflows/suite-package.yml) 也会在打包源码变化时运行；进入默认分支后支持手动触发。插件更新期间，utomation/ci-settings.json 中的 publishInstallers 保持 false，只运行测试构建并上传报告。需要自动交付安装包时将其设为 true，或在手动触发时勾选发布选项。
+3. 工作流下载经过 SHA-512 校验的官方桌面输入，通过 DSH 插件管理器创建全新 Profile，解析依赖及必需 peer，再内置已适配的运行程序。分别使用原生 Windows x64 和 Mac arm64 构建机。Intel Mac 可用官方底座与所选插件存在依赖冲突，暂缓交付。
 4. 在成功的 Actions 运行页面下载 `suite-win32-x64-*`、`suite-darwin-arm64-*` 和 `suite-darwin-x64-*`。每份包含安装包、报告及 SHA-256 校验值，保留三天。Windows 生成 `.exe`；Mac ZIP 包含应用和安装、签名脚本。两者均支持自定义安装位置。
 5. 本地构建时，在目标系统安装 Node.js 24.9+，执行 `npm ci` 和 `npm --prefix tools ci`。Windows 先执行 `node automation/ci-bootstrap.mjs`，再执行 `npm run build`。Mac 需 Python 3.12 和 Go 1.27.1，完成 bootstrap 后执行 `python3 automation/build_macos.py arm64`（或 `x64`）、`python3 automation/verify_macos.py arm64` 和 `node automation/ci-mac-smoke.mjs arm64`，保持架构一致。Bootstrap 需要全新暂存目录；仍可通过 `inputs.example.json` 指定已准备的输入。
 

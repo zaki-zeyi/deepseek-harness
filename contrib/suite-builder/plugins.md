@@ -14,6 +14,6 @@ seed:dsh-industry-research
 https://github.com/WSL043/dsh-codex-subscription
 ```
 
-提交并推送此列表后，GitHub Actions 自动生成 Windows x64、macOS arm64 和 macOS x64 安装包；在 Actions 运行页面下载产物。本机已准备输入时，也可双击“一键打包.cmd”或“监听插件列表.cmd”。
+提交并推送此列表后，GitHub Actions 自动测试 Windows x64 和 macOS arm64 打包；插件更新期间仅上传报告。准备交付时，将 automation/ci-settings.json 的 publishInstallers 设为 true，即可自动上传安装包。Intel Mac 暂缓。本机已准备输入时，也可双击“一键打包.cmd”或“监听插件列表.cmd”。
 也可把整个代码块复制到 README.md，使用 `node automation/build.mjs --list README.md`。
 账号登录由最终用户完成。Windows 产物通过本机验证后才会出现在 dist/automated。
