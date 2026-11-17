@@ -72,7 +72,6 @@ try {
   $report = Get-Content -LiteralPath $latest.report -Raw | ConvertFrom-Json
   $report.checks += [pscustomobject]@{name='installer-single-instance';status='passed';scenarios=@('renamed duplicate exits','simultaneous launches converge','exit releases mutex')}
   $report | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $latest.report -Encoding utf8NoBOM
-  Copy-Item -LiteralPath $latest.report -Destination (Join-Path (Split-Path $installer) 'report.json') -Force
 } finally {
   Stop-OwnedWizards
   foreach ($p in $children) { $p.Dispose() }
