@@ -11,6 +11,13 @@ on:
         description: Upload installable packages after all checks pass
         type: boolean
         default: false
+      macos_runner:
+        description: Mac runner image; use macos-26 if macos-15 capacity is unavailable
+        type: choice
+        options:
+          - macos-15
+          - macos-26
+        default: macos-15
 
 permissions:
   contents: read
@@ -22,7 +29,7 @@ concurrency:
 jobs:
   package:
     name: Package ${{ matrix.target }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.target == 'darwin-arm64' && inputs.macos_runner == 'macos-26' && 'macos-26' || matrix.runner }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
