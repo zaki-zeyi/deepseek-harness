@@ -199,14 +199,13 @@ def prepare(arch):
     dest=OUT/f'DeepSeek-Harness-Suite-{VERSION}-mac-{arch}.zip'
     prefix='DeepSeek Harness Suite.app/';resource=prefix+'Contents/Resources/'
     say('ZIP macOS app '+arch)
-    # Reuse the already packaged immutable core, retaining its Unix symlinks.
-    shutil.copyfile(original,dest)
-    with zipfile.ZipFile(dest,'a',allowZip64=True) as z:
-        pl=plistlib.loads(z.read(prefix+'Contents/Info.plist'));pl.update(CFBundleShortVersionString=VERSION,CFBundleVersion=VERSION)
+    # A fresh archive avoids orphaned local entries confusing macOS Archive Utility/ditto.
+    with zipfile.ZipFile(original) as baseline,zipfile.ZipFile(dest,'w',allowZip64=True) as z:
+        pl=plistlib.loads(baseline.read(prefix+'Contents/Info.plist'));pl.update(CFBundleShortVersionString=VERSION,CFBundleVersion=VERSION)
         replace={prefix+'Contents/Info.plist',resource+'seed-profile.zip',resource+'suite-inventory.json','安装说明.txt','安装到自定义位置.command','修复签名.command','验证依赖.command'}
         replace.update(resource+'app/'+n for n in ('lib/main.js','lib/suite-runtimes.js','package.json'))
-        z.filelist=[i for i in z.filelist if i.filename not in replace]
-        z.NameToInfo={i.filename:i for i in z.filelist}
+        for entry in baseline.infolist():
+            if entry.filename not in replace:z.writestr(entry,baseline.read(entry),compresslevel=3)
         add_bytes(z,prefix+'Contents/Info.plist',plistlib.dumps(pl))
         for name in ('lib/main.js','lib/suite-runtimes.js','package.json'):add_bytes(z,resource+'app/'+name,(app/name).read_bytes())
         add_tree(z,deps,resource+'dependencies/')

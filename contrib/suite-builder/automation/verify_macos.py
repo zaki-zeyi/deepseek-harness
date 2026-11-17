@@ -4,12 +4,10 @@ from build_macos import OUT,add_bytes,digest
 ROOT='DeepSeek Harness Suite.app/Contents/Resources/'
 for arch in sys.argv[1:] or ('arm64','x64'):
     artifact=OUT/f'DeepSeek-Harness-Suite-1.1.0-mac-{arch}.zip'
-    with zipfile.ZipFile(artifact,'a') as z:
+    with zipfile.ZipFile(artifact) as z:
         for tool in ('codex','bun','lark-cli','mihomo'):
             entry=ROOT+'runtime/bin/'+tool
-            if entry not in z.namelist():
-                text='#!/bin/sh\nBASE=$(CDPATH= cd -- "$(dirname -- "$0")/../../dependencies/bin" && pwd) || exit 1\nexec "$BASE/'+tool+'" "$@"\n'
-                add_bytes(z,entry,text.encode(),0o100755)
+            if entry not in z.namelist():raise RuntimeError('Missing packaged CLI wrapper: '+entry)
     with zipfile.ZipFile(artifact) as z:
         expected=0x100000c if arch=='arm64' else 0x1000007
         paths=[ROOT+'runtime/primary-runtime/dependencies/node/bin/node',ROOT+'dependencies/orb-electron/Electron.app/Contents/MacOS/Electron']
