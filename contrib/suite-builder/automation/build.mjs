@@ -268,7 +268,7 @@ async function packageInstaller() {
   log('生成支持自定义安装目录的 NSIS 安装器…');
   fs.mkdirSync(out,{recursive:true});
   const builder=path.join(root,'tools/node_modules/electron-builder/out/cli/cli.js');
-  await run(process.execPath,[builder,'--win','--x64','--prepackaged',app,'--config',path.join(root,'builder/win.yml'),`--config.directories.output=${out}`,`--config.extraMetadata.version=${rules.version}`],{cwd:path.join(root,'tools'),env:{CSC_IDENTITY_AUTO_DISCOVERY:'false',ELECTRON_BUILDER_COMPRESSION_LEVEL:'3'}});
+  await run(process.execPath,[builder,'--win','--x64','--publish','never','--prepackaged',app,'--config',path.join(root,'builder/win.yml'),`--config.directories.output=${out}`,`--config.extraMetadata.version=${rules.version}`],{cwd:path.join(root,'tools'),env:{CSC_IDENTITY_AUTO_DISCOVERY:'false',ELECTRON_BUILDER_COMPRESSION_LEVEL:'3'}});
   const artifact=files(out).find(p=>p.endsWith('.exe'));if(!artifact)throw Error('构建器没有输出安装器');
   await run(seven,['t',artifact,'-bso0','-bsp0'],{capture:true});
   report.checks.push({name:'installer-archive-integrity',status:'passed'});
