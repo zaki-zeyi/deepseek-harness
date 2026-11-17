@@ -2,8 +2,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 
+/** Voice model weights are downloaded only after the user opts in. */
+export function assertNoOrbVoiceModels(profile){
+  const root=path.join(profile,'node_modules/dsh-orb');
+  if(!fs.existsSync(root))return;
+  function scan(dir){for(const item of fs.readdirSync(dir,{withFileTypes:true})){
+    const file=path.join(dir,item.name);
+    if(item.isDirectory())scan(file);
+    else if(/\.(onnx|tflite|safetensors|gguf|pt|pth)$/i.test(item.name))throw Error('Orb voice models must be user opt-in downloads: '+path.relative(root,file));
+  }}
+  scan(root);
+}
+
 /** Check the native profile before any platform is allowed to package it. */
 export function checkProfile({profile,runtime,plugins,rules,semver}) {
+  assertNoOrbVoiceModels(profile);
   const within=file=>{const rel=path.relative(profile,file);return rel!== '..'&&!rel.startsWith('..'+path.sep)&&!path.isAbsolute(rel)};
   function locate(name,from){let dir=from;while(within(dir)){const file=path.join(dir,'node_modules',name,'package.json');if(fs.existsSync(file))return file;const next=path.dirname(dir);if(next===dir)break;dir=next}return null}
   const visited=new Set(),warnings=[];

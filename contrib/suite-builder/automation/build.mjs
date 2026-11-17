@@ -8,6 +8,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 import { parseList, hash, inside, files } from './lib.mjs';
+import {assertNoOrbVoiceModels} from './profile-guard.mjs';
 const root = path.resolve(__dirname, '..');
 const rules = JSON.parse(fs.readFileSync(path.join(__dirname,'runtime-rules.json')));
 const npm = path.join(path.dirname(process.execPath),'node_modules/npm/bin/npm-cli.js');
@@ -109,6 +110,7 @@ function scanPlugin(plugin) {
   if(evidence.length&&!rules.reviewedVersions[plugin.name]?.includes(plugin.version))throw Error(`插件 ${plugin.name}@${plugin.version} 含外部运行程序调用，需添加或更新依赖适配规则后才能发布。证据：${evidence.slice(0,5).join(', ')}`);
 }
 function checkDependencies() {
+  assertNoOrbVoiceModels(profile);
   const seen=new Set();
   function visit(file,legacy=false) {
     const real=fs.realpathSync(file);if(!inside(runRoot,real))throw Error(`依赖逃逸到构建目录外：${file}`);
