@@ -74,7 +74,7 @@ for(const input of inputs){
     ({spec,version}=seed);
   }else if(input.startsWith('https://github.com/')){
     const slug=new URL(input).pathname.replace(/\/$/,'').replace(/\.git$/,'');
-    const response=await fetch(`https://api.github.com/repos${slug}/contents/package.json`,{headers:{'User-Agent':'dsh-suite-builder',Accept:'application/vnd.github.raw+json'}});
+    const response=await fetch(`https://raw.githubusercontent.com${slug}/HEAD/package.json`,{signal:AbortSignal.timeout(60000)});
     if(!response.ok)throw Error(`Cannot resolve plugin repository ${input}: ${response.status}`);
     const manifest=await response.json();name=manifest.name;version=manifest.version;spec=`${name}@${version}`;
     const published=JSON.parse(await command(process.execPath,[npmCli(),'view',spec,'--json'],{capture:true}));

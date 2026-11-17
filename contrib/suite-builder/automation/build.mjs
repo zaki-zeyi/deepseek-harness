@@ -64,7 +64,7 @@ async function resolvePlugin(input) {
   if(input.startsWith('https://github.com/')) {
     repository=input.replace(/#.*$/,'').replace(/\/$/,'').replace(/\.git$/,'');
     const slug=new URL(repository).pathname;
-    const response=await fetch(`https://api.github.com/repos${slug}/contents/package.json`,{headers:{'User-Agent':'dsh-suite-builder',Accept:'application/vnd.github.raw+json'}});
+    const response=await fetch(`https://raw.githubusercontent.com${slug}/HEAD/package.json`,{signal:AbortSignal.timeout(60000)});
     if(!response.ok)throw Error(`仓库没有可读的根 package.json：${repository} (${response.status})`);
     const pkg=await response.json();
     spec=`${pkg.name}@${pkg.version}`;
