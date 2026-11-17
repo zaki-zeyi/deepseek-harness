@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 摘要
 
-本独立工具把 Harness 桌面应用与 [插件列表](plugins.md) 中的插件整合打包，包含 npm 依赖和已适配的外部运行程序。
+本独立工具把 Harness 桌面应用与 [插件列表](plugins.md) 中的插件整合打包，包含 npm 依赖和已适配的外部运行程序。依赖对应关系及 Windows 实测基线：[English](DEPENDENCIES.md) / [中文](DEPENDENCIES.zh.md)。
 
 ## 目录
 

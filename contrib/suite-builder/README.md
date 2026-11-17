@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-This independent tool packages Harness desktop apps with the plugins in [plugins.md](plugins.md), including their npm dependencies and reviewed external runtimes.
+This independent tool packages Harness desktop apps with the plugins in [plugins.md](plugins.md), including their npm dependencies and reviewed external runtimes. Dependency ownership and the measured Windows baseline: [English](DEPENDENCIES.md) / [中文](DEPENDENCIES.zh.md).
 
 ## Table of Contents
 
