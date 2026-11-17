@@ -137,3 +137,31 @@ jobs:
           path: |
             contrib/suite-builder/build/**/report.json
             contrib/suite-builder/build/**/build.log
+
+  release:
+    name: Publish community installers
+    needs: package
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_installers
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: contrib/suite-builder
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: suite-win32-x64-${{ github.run_number }}
+          path: release-input/windows
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: suite-darwin-arm64-${{ github.run_number }}
+          path: release-input/mac
+      - name: Verify packages and publish Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node contrib/suite-builder/automation/publish-release.mjs release-input
