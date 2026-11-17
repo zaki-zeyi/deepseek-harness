@@ -82,6 +82,9 @@ jobs:
           npm --prefix tools ci --ignore-scripts --no-audit --no-fund
       - name: Check list and download guards
         run: npm test
+      - name: Check runtime archive aliases
+        if: runner.os == 'macOS'
+        run: python3 -m unittest discover -s automation -p '*_test.py'
       - name: Prepare pinned official core and native plugin profile
         run: node automation/ci-bootstrap.mjs ${{ matrix.target }}
       - name: Build Windows installer and verify runtime

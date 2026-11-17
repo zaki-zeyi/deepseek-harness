@@ -198,20 +198,31 @@ async function main() {
   const gitZip=path.join(root,rules.git.cache);await download(rules.git.url,gitZip,rules.git.sha256);
   await run(seven,['x','-y',`-o${path.join(deps,'git')}`,gitZip],{capture:true});
   const bin=path.join(deps,'bin');fs.mkdirSync(bin,{recursive:true});
-  // Real executable copies ensure execFile('lark-cli') works without a shell.
-  fs.copyFileSync(node,path.join(bin,'node.exe'));
-  fs.copyFileSync(path.join(deps,'node_modules/@larksuite/cli/bin/lark-cli.exe'),path.join(bin,'lark-cli.exe'));
-  fs.copyFileSync(path.join(deps,'node_modules/bun/bin/bun.exe'),path.join(bin,'bun.exe'));
   const codexFiles=files(path.join(deps,'node_modules/@openai')).filter(p=>path.basename(p)==='codex.exe');
   if(codexFiles.length!==1)throw Error('未找到唯一 Codex 平台二进制');
-  fs.copyFileSync(codexFiles[0],path.join(bin,'codex.exe'));
-  const runtimeScript=`import {join,delimiter} from 'node:path';\nconst dep=join(process.resourcesPath,'dependencies');\nprocess.env.PATH=join(dep,'bin')+delimiter+join(dep,'git','cmd')+delimiter+(process.env.PATH||'');\nprocess.env.OUR_FREE_MODEL_BUN=join(dep,'bin','bun.exe');\n${selected.has('dsh-orb')?"process.env.DSH_ORB_ELECTRON_PATH=join(dep,'orb-electron','electron.exe');":''}\n`;
+  // Keep npm's native files in place so wrappers and direct CLI calls share one copy.
+  const nativeCommands={node,'lark-cli':path.join(deps,'node_modules/@larksuite/cli/bin/lark-cli.exe'),bun:path.join(deps,'node_modules/bun/bin/bun.exe'),codex:codexFiles[0]};
+  const nativeDirs=[...new Set(Object.values(nativeCommands).map(file=>path.dirname(file)))];
+  for(const [name,canonical] of Object.entries(nativeCommands)) {
+    const oldCopy=path.join(bin,name+'.exe');
+    if(fs.existsSync(oldCopy)) {
+      if(!inside(runRoot,oldCopy)||await hash(oldCopy)!==await hash(canonical))throw Error('旧模板中的 CLI 副本与原始程序不一致：'+name);
+      fs.unlinkSync(oldCopy);
+    }
+  }
+  const relativeDirs=nativeDirs.map(dir=>path.relative(resources,dir).split(path.sep).join('/'));
+  const bunRelative=path.relative(resources,nativeCommands.bun).split(path.sep).join('/');
+  report.runtimeDeduplication={method:'native PATH directories; canonical npm binaries retained',avoidedCopies:Object.fromEntries(Object.entries(nativeCommands).map(([name,file])=>[name,fs.statSync(file).size]))};
+  const runtimeScript=`import {join,delimiter} from 'node:path';\nconst dep=join(process.resourcesPath,'dependencies');\nconst nativeDirs=${JSON.stringify(relativeDirs)}.map(dir=>join(process.resourcesPath,dir));\nprocess.env.PATH=[join(dep,'bin'),...nativeDirs,join(dep,'git','cmd'),process.env.PATH||''].join(delimiter);\nprocess.env.OUR_FREE_MODEL_BUN=join(process.resourcesPath,${JSON.stringify(bunRelative)});\n${selected.has('dsh-orb')?"process.env.DSH_ORB_ELECTRON_PATH=join(dep,'orb-electron','electron.exe');":''}\n`;
   fs.writeFileSync(path.join(payload,'lib/suite-runtimes.js'),runtimeScript);
   const mainFile=path.join(payload,'lib/main.js');fs.writeFileSync(mainFile,'import "./suite-runtimes.js";\n'+fs.readFileSync(mainFile,'utf8'));
   const pkgFile=path.join(payload,'package.json');const pkg=JSON.parse(fs.readFileSync(pkgFile));pkg.version=rules.version;pkg.dshSuite.plugins=report.plugins.map(p=>p.name);fs.writeFileSync(pkgFile,JSON.stringify(pkg,null,2));
   const cmd=path.join(resources,'runtime/cli/bin/dsh.cmd');fs.writeFileSync(cmd,fs.readFileSync(cmd,'utf8').replaceAll('app.asar','app'));
-  const cleanEnv={...env,PATH:bin+';'+path.join(process.env.SystemRoot,'System32')+';'+process.env.SystemRoot};
-  for(const name of ['lark-cli','codex','bun']) {const result=await run(path.join(bin,name+'.exe'),['--version'],{env:cleanEnv,capture:true,timeout:30000});report.checks.push({name:name+'-bundled-launch',status:'passed',output:result.output.trim()});}
+  const cleanEnv={...env,PATH:[bin,...nativeDirs,path.join(process.env.SystemRoot,'System32'),process.env.SystemRoot].join(';')};
+  for(const name of ['lark-cli','codex','bun']) {const result=await run(nativeCommands[name],['--version'],{env:cleanEnv,capture:true,timeout:30000});report.checks.push({name:name+'-bundled-launch',status:'passed',output:result.output.trim()});}
+  const pathProbe="const {spawnSync}=require('node:child_process');for(const name of ['codex','bun','lark-cli']){const r=spawnSync(name,['--version'],{encoding:'utf8',env:process.env});if(r.error||r.status!==0)throw r.error||Error(name+' failed');console.log(name+': '+r.stdout.trim())}";
+  await run(node,['-e',pathProbe],{cwd:runRoot,env:cleanEnv,capture:true,timeout:60000});
+  report.checks.push({name:'deduplicated-native-PATH-launch',status:'passed'});
   {const result=await run(path.join(deps,'git/cmd/git.exe'),['--version'],{env:cleanEnv,capture:true,timeout:30000});report.checks.push({name:'git-bundled-launch',status:'passed',output:result.output.trim()});}
   if(selected.has('dsh-orb')) {const result=await run(path.join(deps,'orb-electron/electron.exe'),['--version'],{env:{...cleanEnv,ELECTRON_RUN_AS_NODE:'1'},capture:true,timeout:30000});report.checks.push({name:'orb-runtime-launch',status:'passed',output:result.output.trim()});}
   const verifyAlias=path.join(home,'profiles/suite-check');
@@ -223,7 +234,7 @@ async function main() {
   await run(node,[nativeCheck],{env:cleanEnv,capture:true,timeout:20000});report.checks.push({name:'native-module-launch',status:'passed'});
   await run(node,[path.join(root,'scripts/audit_dependencies.mjs'),profile,resources],{env:cleanEnv,capture:true});
   log('启动真实 Desktop Host，验证插件服务注册…');
-  report.checks.push(...await (await import('./verify-host.mjs')).default({node,payload,profile,resources,plugins:report.plugins,logFile:path.join(runRoot,'host-smoke.log'),env:{...cleanEnv,DSH_ORB_ELECTRON_PATH:path.join(deps,'orb-electron/electron.exe'),OUR_FREE_MODEL_BUN:path.join(bin,'bun.exe')}}));
+  report.checks.push(...await (await import('./verify-host.mjs')).default({node,payload,profile,resources,plugins:report.plugins,logFile:path.join(runRoot,'host-smoke.log'),env:{...cleanEnv,DSH_ORB_ELECTRON_PATH:path.join(deps,'orb-electron/electron.exe'),OUR_FREE_MODEL_BUN:nativeCommands.bun}}));
   log('生成插件种子包…');
   if(fs.existsSync(path.join(resources,'seed-profile.zip')))fs.unlinkSync(path.join(resources,'seed-profile.zip'));
   await run(seven,['a','-tzip','-mx=6',path.join(resources,'seed-profile.zip'),'.','-xr!.git','-xr!.pnpm','-xr!.bin','-xr!.modules.yaml','-xr!.plugin-manager'],{cwd:profile,capture:true});
@@ -246,6 +257,8 @@ async function packageInstaller() {
     await run(seven,['x','-y',`-o${target}`,archive],{capture:true});
     const binaries=files(target).filter(p=>p.endsWith('.exe'));if(binaries.length!==1)throw Error('mihomo 归档中没有唯一可执行文件');
     fs.copyFileSync(binaries[0],path.join(deps,'bin/mihomo.exe'));
+    if(!inside(runRoot,binaries[0])||await hash(binaries[0])!==await hash(path.join(deps,'bin/mihomo.exe')))throw Error('mihomo 去重校验失败');
+    fs.unlinkSync(binaries[0]);
     const license=path.join(target,'LICENSE');
     if(!fs.existsSync(license)) {
       const response=await fetch(`https://raw.githubusercontent.com/MetaCubeX/mihomo/v${rules.mihomo.version}/LICENSE`);

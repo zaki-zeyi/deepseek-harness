@@ -1,6 +1,7 @@
 """Final architecture and ZIP checks; no claim of macOS execution."""
 import hashlib,io,json,pathlib,struct,sys,zipfile
 from build_macos import OUT,add_bytes,digest
+from zip_helpers import resolve_alias
 ROOT='DeepSeek Harness Suite.app/Contents/Resources/'
 for arch in sys.argv[1:] or ('arm64','x64'):
     artifact=OUT/f'DeepSeek-Harness-Suite-1.1.0-mac-{arch}.zip'
@@ -13,7 +14,7 @@ for arch in sys.argv[1:] or ('arm64','x64'):
         paths=[ROOT+'runtime/primary-runtime/dependencies/node/bin/node',ROOT+'dependencies/orb-electron/Electron.app/Contents/MacOS/Electron']
         paths += [ROOT+'dependencies/bin/'+n for n in ('codex','bun','lark-cli','mihomo')]
         for p in paths:
-            with z.open(p) as f:b=f.read(8)
+            with z.open(resolve_alias(z,p,ROOT)) as f:b=f.read(8)
             if b[:4]!=b'\xcf\xfa\xed\xfe' or struct.unpack('<I',b[4:8])[0]!=expected:raise RuntimeError('Wrong Mach-O architecture: '+p)
         core=json.loads(z.read(ROOT+'app/dsh/node_modules/@deepseek-ai/dsh/package.json'))['version']
         with zipfile.ZipFile(io.BytesIO(z.read(ROOT+'seed-profile.zip'))) as seed:

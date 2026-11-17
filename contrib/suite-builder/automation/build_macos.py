@@ -1,6 +1,7 @@
 """Cross-package macOS payloads; runtime validation requires a real Mac."""
 import hashlib, json, os, pathlib, plistlib, shutil, struct, subprocess, sys, tarfile, time, urllib.request, zipfile
 import base64, urllib.parse
+from zip_helpers import write_alias
 R = pathlib.Path(__file__).resolve().parent.parent
 INPUTS = json.loads((R/'inputs.local.json').read_text('utf-8')) if (R/'inputs.local.json').exists() else {}
 def input_path(name,default):
@@ -118,11 +119,12 @@ def executable(rel):
     return '/bin/' in '/'+rel or '/Contents/MacOS/' in rel or name in ('spawn-helper','soffice','soffice.bin','unopkg','rg','node','bun','codex','lark-cli','mihomo') or name.startswith('magpie-darwin-') or name.endswith(('.command','.sh')) or '/libreoffice-kit-' in rel and '/program/' in rel
 def add_bytes(z,name,data,mode=0o100644):
     i=zipfile.ZipInfo(name,(2026,11,17,0,0,0));i.create_system=3;i.external_attr=mode<<16;i.compress_type=zipfile.ZIP_DEFLATED;z.writestr(i,data,compresslevel=3)
-def add_tree(z,base,prefix):
+def add_tree(z,base,prefix,exclude=()):
     base=longpath(base)
     for p in sorted(base.rglob('*')):
         if p.is_file():
             rel=p.relative_to(base).as_posix()
+            if rel in exclude:continue
             add_bytes(z,prefix+rel,p.read_bytes(),0o100755 if executable(rel) else 0o100644)
 def ignore(dir,names):
     return [n for n in names if n in ('.pnpm','.git','.bin','.modules.yaml','.plugin-manager','.dsh-market')]
@@ -173,6 +175,10 @@ def prepare(arch):
     lark_arch='arm64' if arch=='arm64' else 'amd64'
     lark,record=asset('larksuite/cli','v1.0.100',lambda n:n==f'lark-cli-1.0.100-darwin-{lark_arch}.tar.gz')
     extract(lark,deps/'lark');larkbin=next(p for p in (deps/'lark').rglob('lark-cli') if p.is_file());shutil.copy2(larkbin,bin/'lark-cli');inv['macLark']=record
+    aliases={f'bin/{name}':os.path.relpath(source,bin).replace('\\','/') for name,source in [('codex',codex),('bun',bun),('lark-cli',larkbin)]}
+    for name,source in [('codex',codex),('bun',bun),('lark-cli',larkbin)]:
+        if digest(source)!=digest(bin/name):raise RuntimeError('Runtime alias payload mismatch: '+name)
+    inv['runtimeDeduplication']={'method':'relative executable symlinks; canonical binaries retained','aliases':aliases,'uncompressedBytesAvoided':sum((bin/name).stat().st_size for name in ['codex','bun','lark-cli'])}
     mh,mhrecord=asset('MetaCubeX/mihomo','v1.19.34',lambda n:n==('mihomo-darwin-arm64-v1.19.34.gz' if arch=='arm64' else 'mihomo-darwin-amd64-compatible-v1.19.34.gz'))
     import gzip
     with gzip.open(mh,'rb') as f,open(bin/'mihomo','wb') as out:shutil.copyfileobj(f,out)
@@ -208,7 +214,8 @@ def prepare(arch):
             if entry.filename not in replace:z.writestr(entry,baseline.read(entry),compresslevel=3)
         add_bytes(z,prefix+'Contents/Info.plist',plistlib.dumps(pl))
         for name in ('lib/main.js','lib/suite-runtimes.js','package.json'):add_bytes(z,resource+'app/'+name,(app/name).read_bytes())
-        add_tree(z,deps,resource+'dependencies/')
+        add_tree(z,deps,resource+'dependencies/',exclude=aliases)
+        for alias,target in aliases.items():write_alias(z,resource+'dependencies/'+alias,target)
         with zipfile.ZipFile(electron) as e:
             for i in e.infolist():
                 info=zipfile.ZipInfo(resource+'dependencies/orb-electron/'+i.filename,i.date_time);info.create_system=3;info.external_attr=i.external_attr;info.compress_type=zipfile.ZIP_DEFLATED;z.writestr(info,e.read(i),compresslevel=3)
