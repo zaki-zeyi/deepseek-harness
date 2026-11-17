@@ -30,6 +30,20 @@ export default async function verifyHost({node,payload,profile,resources,env,plu
     }
     const origin=new URL(url).origin;
     const checks=[{name:'actual-desktop-host-ready',status:'passed'}];
+    if(plugins.some(p=>p.name==='dsh-industry-research')) {
+      const deadline=Date.now()+45000;
+      let status;
+      do {
+        const r=await fetch(origin+'/industry-research/status',{headers:{cookie,origin},signal:AbortSignal.timeout(10000)});
+        if(!r.ok)throw Error(`行研插件服务未注册：HTTP ${r.status}`);
+        status=await r.json();
+        if(status.state==='error')throw Error('行研插件启动失败：'+status.message);
+        if(status.state==='ready')break;
+        await new Promise(resolve=>setTimeout(resolve,250));
+      } while(Date.now()<deadline);
+      if(status?.state!=='ready')throw Error('行研插件服务启动超时');
+      checks.push({name:'industry-research-registered-and-ready',status:'passed'});
+    }
     if(plugins.some(p=>p.name==='dsh-orb')) {
       await new Promise(resolve=>setTimeout(resolve,5000));
       const r=await fetch(origin+'/.dsh-orb/settings',{headers:{cookie,origin},signal:AbortSignal.timeout(15000)});

@@ -22,6 +22,6 @@
     "@xmanrui/dsh-im": {"version":"5.10.0","spec":"@xmanrui/dsh-im@5.10.0"},
     "dsh-orb": {"version":"0.2.1","spec":"dsh-orb@0.2.1"},
     "dsh-our-free-model": {"version":"2.8.3","spec":"https://codeload.github.com/Ebony-Vinyl/dsh-our-free-model/tar.gz/9aa84122b95d80e734c27f05526262580a9c3b4d"},
-    "dsh-industry-research": {"version":"0.8.13","spec":"https://github.com/zaki-zeyi/dsh-industry-research/releases/download/v0.8.13/dsh-industry-research-0.8.13.tgz"}
+    "dsh-industry-research": {"version":"0.13.2","spec":"https://github.com/zaki-zeyi/dsh-industry-research/releases/download/v0.13.2/dsh-industry-research-0.13.2.tgz"}
   }
 }

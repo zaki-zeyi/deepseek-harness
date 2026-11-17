@@ -9,7 +9,7 @@
     "@xmanrui/dsh-im": ["5.10.0"],
     "dsh-orb": ["0.2.1"],
     "dsh-our-free-model": ["2.8.3"],
-    "dsh-industry-research": ["0.8.13"],
+    "dsh-industry-research": ["0.8.13", "0.13.2"],
     "dsh-codex-subscription": ["3.2.19"]
   },
   "npmRuntimes": {
