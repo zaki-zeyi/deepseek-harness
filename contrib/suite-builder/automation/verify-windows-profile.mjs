@@ -44,6 +44,18 @@ export async function verifyWindowsProfiles({resources,payload,node,plugins,env}
       const warmStart=performance.now();await initializeSuite(resources,home);
       assert.equal(fs.readFileSync(manifestFile,'utf8'),saved);
       checks.push({name:'suite-profile-'+scenario,status:'passed',registrationMs:firstMs,warmRegistrationMs:Math.round(performance.now()-warmStart)});
+      if(scenario==='existing'){
+        const relocated=path.join(owned,'安装位置 变更','resources');
+        fs.mkdirSync(relocated,{recursive:true});
+        for(const name of ['app','runtime','seed-profile'])fs.symlinkSync(path.join(resources,name),path.join(relocated,name),'junction');
+        fs.copyFileSync(path.join(resources,'suite-inventory.json'),path.join(relocated,'suite-inventory.json'));
+        await initializeSuite(relocated,home);
+        const moved=JSON.parse(fs.readFileSync(manifestFile,'utf8'));
+        for(const {name} of plugins)assert.equal(moved.dependencies[name],'link:'+path.join(relocated,'seed-profile/node_modules',name).replaceAll('\\','/'));
+        assert.ok(!moved.dsh.profile.bundles.includes('dsh-brand'));
+        assert.equal(fs.readFileSync(path.join(profile,'account-sentinel.txt'),'utf8'),'user account preserved');
+        checks.push({name:'suite-profile-existing-relocation',status:'passed'});
+      }
       const host=await verifyHost({node,payload,resources,profile,plugins,env:{...env,DSH_HOME:home},logFile:path.join(owned,scenario+'-host.log')});
       checks.push(...host.map(check=>({...check,name:scenario+'-'+check.name})));
       console.log('Verified '+scenario+' suite profile; registration '+firstMs+' ms');
