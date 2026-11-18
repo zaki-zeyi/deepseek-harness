@@ -50,7 +50,7 @@ Users authorize their own accounts. On Windows, first launch registers prepared 
 <a id="developer-checks"></a>
 ## Developer checks
 
-Run `npm test` for list parsing, staging boundaries, download failures, subprocess failures, Profile preservation and Windows directory argument handling. The Windows build exercises fresh and existing Profiles against the real Desktop Host, then installs the complete offline EXE into a path containing Chinese characters and spaces, repeats the checks using installed files, and uninstalls the test copy. Actions additionally builds and checks actual platform packages; unit tests alone do not validate an installer.
+Run `npm test` for list parsing, staging boundaries, download failures, subprocess failures, Profile preservation and Windows directory argument handling. The Windows build exercises fresh and existing Profiles against the real Desktop Host, then installs the complete offline EXE into a path containing Chinese characters and spaces, repeats the checks using installed files, and uninstalls the test copy. Actions additionally builds and checks actual platform packages; unit tests alone do not validate an installer. Generated `build`, `dist` and `downloads` trees are excluded from bilingual source-document discovery.
 
 <a id="dev-note"></a>
 ## Dev Note

@@ -50,7 +50,7 @@ Windows 探针覆盖内置 CLI 启动、原生模块及 Desktop Host 注册。Ma
 <a id="developer-checks"></a>
 ## 开发检查
 
-执行 `npm test` 检查列表解析、暂存目录边界、下载失败、子进程失败、Profile 保护和 Windows 安装路径参数。Windows 构建会在真实 Desktop Host 中验收新旧 Profile，再将完整离线 EXE 安装到含中文和空格的目录，使用安装后的文件重复验收，并卸载测试副本。Actions 还会构建并检查各平台的实际安装包；单元测试通过不能替代安装包验收。
+执行 `npm test` 检查列表解析、暂存目录边界、下载失败、子进程失败、Profile 保护和 Windows 安装路径参数。Windows 构建会在真实 Desktop Host 中验收新旧 Profile，再将完整离线 EXE 安装到含中文和空格的目录，使用安装后的文件重复验收，并卸载测试副本。Actions 还会构建并检查各平台的实际安装包；单元测试通过不能替代安装包验收。生成的 `build`、`dist` 和 `downloads` 目录不参与双语源码文档发现。
 
 <a id="dev-note"></a>
 ## 开发说明
