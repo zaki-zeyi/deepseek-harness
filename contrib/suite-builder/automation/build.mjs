@@ -200,10 +200,8 @@ async function main() {
   const gitZip=path.join(root,rules.git.cache);await download(rules.git.url,gitZip,rules.git.sha256);
   await run(seven,['x','-y',`-o${path.join(deps,'git')}`,gitZip],{capture:true});
   const bin=path.join(deps,'bin');fs.mkdirSync(bin,{recursive:true});
-  const codexFiles=files(path.join(deps,'node_modules/@openai')).filter(p=>path.basename(p)==='codex.exe');
-  if(codexFiles.length!==1)throw Error('未找到唯一 Codex 平台二进制');
   // Keep npm's native files in place so wrappers and direct CLI calls share one copy.
-  const nativeCommands={node,'lark-cli':path.join(deps,'node_modules/@larksuite/cli/bin/lark-cli.exe'),bun:path.join(deps,'node_modules/bun/bin/bun.exe'),codex:codexFiles[0]};
+  const nativeCommands={node,'lark-cli':path.join(deps,'node_modules/@larksuite/cli/bin/lark-cli.exe'),bun:path.join(deps,'node_modules/bun/bin/bun.exe')};
   const nativeDirs=[...new Set(Object.values(nativeCommands).map(file=>path.dirname(file)))];
   for(const [name,canonical] of Object.entries(nativeCommands)) {
     const oldCopy=path.join(bin,name+'.exe');
@@ -221,8 +219,10 @@ async function main() {
   const pkgFile=path.join(payload,'package.json');const pkg=JSON.parse(fs.readFileSync(pkgFile));pkg.version=rules.version;pkg.dshSuite.plugins=report.plugins.map(p=>p.name);fs.writeFileSync(pkgFile,JSON.stringify(pkg,null,2));
   const cmd=path.join(resources,'runtime/cli/bin/dsh.cmd');fs.writeFileSync(cmd,fs.readFileSync(cmd,'utf8').replaceAll('app.asar','app'));
   const cleanEnv={...env,PATH:[bin,...nativeDirs,path.join(process.env.SystemRoot,'System32'),process.env.SystemRoot].join(';')};
-  for(const name of ['lark-cli','codex','bun']) {const result=await run(nativeCommands[name],['--version'],{env:cleanEnv,capture:true,timeout:30000});report.checks.push({name:name+'-bundled-launch',status:'passed',output:result.output.trim()});}
-  const pathProbe="const {spawnSync}=require('node:child_process');for(const name of ['codex','bun','lark-cli']){const r=spawnSync(name,['--version'],{encoding:'utf8',env:process.env});if(r.error||r.status!==0)throw r.error||Error(name+' failed');console.log(name+': '+r.stdout.trim())}";
+  for(const name of ['lark-cli','bun']) {const result=await run(nativeCommands[name],['--version'],{env:cleanEnv,capture:true,timeout:30000});report.checks.push({name:name+'-bundled-launch',status:'passed',output:result.output.trim()});}
+  if(fs.existsSync(path.join(deps,'node_modules/@openai/codex')))throw Error('Obsolete global Codex CLI remains in staging; use a fresh build');
+  report.checks.push({name:'obsolete-global-codex-absent',status:'passed'});
+  const pathProbe="const {spawnSync}=require('node:child_process');for(const name of ['bun','lark-cli']){const r=spawnSync(name,['--version'],{encoding:'utf8',env:process.env});if(r.error||r.status!==0)throw r.error||Error(name+' failed');console.log(name+': '+r.stdout.trim())}";
   await run(node,['-e',pathProbe],{cwd:runRoot,env:cleanEnv,capture:true,timeout:60000});
   report.checks.push({name:'deduplicated-native-PATH-launch',status:'passed'});
   {const result=await run(path.join(deps,'git/cmd/git.exe'),['--version'],{env:cleanEnv,capture:true,timeout:30000});report.checks.push({name:'git-bundled-launch',status:'passed',output:result.output.trim()});}
@@ -239,7 +239,8 @@ async function main() {
   report.checks.push(...await (await import('./verify-host.mjs')).default({node,payload,profile,resources,plugins:report.plugins,logFile:path.join(runRoot,'host-smoke.log'),env:{...cleanEnv,DSH_ORB_ELECTRON_PATH:path.join(deps,'orb-electron/electron.exe'),OUR_FREE_MODEL_BUN:nativeCommands.bun}}));
   log('生成插件种子包…');
   if(fs.existsSync(path.join(resources,'seed-profile.zip')))fs.unlinkSync(path.join(resources,'seed-profile.zip'));
-  await run(seven,['a','-tzip','-mx=6',path.join(resources,'seed-profile.zip'),'.','-xr!.git','-xr!.pnpm','-xr!.bin','-xr!.modules.yaml','-xr!.plugin-manager'],{cwd:profile,capture:true});
+  // NSIS compresses the seed and application together; avoid nested compression.
+  await run(seven,['a','-tzip','-mx=0',path.join(resources,'seed-profile.zip'),'.','-xr!.git','-xr!.pnpm','-xr!.bin','-xr!.modules.yaml','-xr!.plugin-manager'],{cwd:profile,capture:true});
   // The previous template zip must not retain files of removed plugins.
   report.stages.push('staged-and-checked');save();
   const inventory={plugins:report.plugins,addedPeers:report.addedPeers,legacyPeerWarnings:report.legacyPeerWarnings,runtimes:rules.npmRuntimes,git:rules.git,orb:selected.has('dsh-orb')?rules.orb:null,disabledFeatures:rules.disabledFeatures,checks:report.checks};
@@ -283,11 +284,14 @@ async function packageInstaller() {
   log('生成支持自定义安装目录的 NSIS 安装器…');
   fs.mkdirSync(out,{recursive:true});
   const builder=path.join(root,'tools/node_modules/electron-builder/out/cli/cli.js');
-  await run(process.execPath,[builder,'--win','--x64','--publish','never','--prepackaged',app,'--config',path.join(root,'builder/win.yml'),`--config.directories.output=${out}`,`--config.extraMetadata.version=${rules.version}`],{cwd:path.join(root,'tools'),env:{CSC_IDENTITY_AUTO_DISCOVERY:'false',ELECTRON_BUILDER_COMPRESSION_LEVEL:'3'}});
+  await run(process.execPath,[builder,'--win','--x64','--publish','never','--prepackaged',app,'--config',path.join(root,'builder/win.yml'),`--config.directories.output=${out}`,`--config.extraMetadata.version=${rules.version}`],{cwd:path.join(root,'tools'),env:{CSC_IDENTITY_AUTO_DISCOVERY:'false',ELECTRON_BUILDER_COMPRESSION_LEVEL:'9'}});
   const artifact=files(out).find(p=>p.endsWith('.exe'));if(!artifact)throw Error('构建器没有输出安装器');
   await run(seven,['t',artifact,'-bso0','-bsp0'],{capture:true});
   report.checks.push({name:'installer-archive-integrity',status:'passed'});
-  report.artifact=artifact;report.sha256=await hash(artifact);report.status='built';report.finished=new Date().toISOString();save();
+  report.artifact=artifact;report.artifactBytes=fs.statSync(artifact).size;
+  if(report.artifactBytes>=600000000)throw Error(`Windows installer exceeds the 600 MB limit: ${report.artifactBytes} bytes`);
+  report.checks.push({name:'installer-under-600mb',status:'passed',bytes:report.artifactBytes,limitBytes:600000000});
+  report.sha256=await hash(artifact);report.status='built';report.finished=new Date().toISOString();save();
   fs.copyFileSync(path.join(runRoot,'report.json'),path.join(out,'report.json'));
   fs.writeFileSync(path.join(out,'SHA256SUMS.txt'),`${report.sha256}  ${path.basename(artifact)}\n`);
   fs.writeFileSync(path.join(root,'dist/automated/latest.json'),JSON.stringify({artifact,sha256:report.sha256,report:path.join(out,'report.json')},null,2));

@@ -11,6 +11,10 @@ on:
         description: Upload installable packages after all checks pass
         type: boolean
         default: false
+      windows_only:
+        description: Build and upload Windows only; skip the combined release job
+        type: boolean
+        default: false
       macos_runner:
         description: Mac runner image; use macos-26 if macos-15 capacity is unavailable
         type: choice
@@ -34,13 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - target: win32-x64
-            runner: windows-latest
-            shell: pwsh
-          - target: darwin-arm64
-            runner: macos-15
-            shell: bash
+        include: ${{ fromJSON(inputs.windows_only && '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"}]' || '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"},{"target":"darwin-arm64","runner":"macos-15","shell":"bash"}]') }}
     defaults:
       run:
         working-directory: contrib/suite-builder
@@ -144,7 +142,7 @@ jobs:
   release:
     name: Publish community installers
     needs: package
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_installers
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_installers && !inputs.windows_only
     runs-on: ubuntu-latest
     permissions:
       contents: write

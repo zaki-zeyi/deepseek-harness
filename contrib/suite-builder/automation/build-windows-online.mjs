@@ -13,6 +13,7 @@ if(report.target!=='win32-x64'||report.status!=='built'||!report.checks.some(c=>
 if(!report.plugins.some(p=>p.name==='dsh-industry-research'&&p.version==='0.13.2'))throw Error('Unexpected industry plugin');
 async function hash(file){const h=crypto.createHash('sha256');for await(const chunk of fs.createReadStream(file))h.update(chunk);return h.digest('hex')}
 if(await hash(payload)!==report.sha256)throw Error('Payload checksum mismatch');
+if(fs.statSync(payload).size>=600000000||!report.checks.some(c=>c.name==='obsolete-global-codex-absent'&&c.status==='passed'))throw Error('Expected a Windows payload below 600 MB without the obsolete global Codex CLI');
 const repo=process.env.GITHUB_REPOSITORY;if(repo!=='zaki-zeyi/deepseek-harness'||!process.env.GITHUB_RUN_NUMBER)throw Error('Unexpected publication repository');
 const tag=`community-windows-online-1.1.0-build-${process.env.GITHUB_RUN_NUMBER}`;
 const url=`https://github.com/${repo}/releases/download/${tag}/${path.basename(payload)}`;
@@ -31,7 +32,7 @@ const installed=path.join(process.env.RUNNER_TEMP,'dsh-online-install-'+process.
 if(fs.existsSync(installed))throw Error('Install verification directory must be fresh');
 await command(payload,['/S',`/D=${installed}`],{timeout:15*60*1000});
 const resources=path.join(installed,'resources'),probe=path.join(output,'installed-smoke.mjs');
-fs.writeFileSync(probe,`import {pathToFileURL} from 'node:url';import {spawnSync} from 'node:child_process';process.resourcesPath=${JSON.stringify(resources)};await import(pathToFileURL(${JSON.stringify(path.join(resources,'app/lib/suite-runtimes.js'))}).href);for(const name of ['codex','bun','lark-cli','mihomo']){const r=spawnSync(name,[name==='mihomo'?'-v':'--version'],{encoding:'utf8',env:process.env});if(r.error||r.status!==0)throw r.error||Error(name+' failed');console.log(name+': '+r.stdout.trim())}`);
+fs.writeFileSync(probe,`import {pathToFileURL} from 'node:url';import {spawnSync} from 'node:child_process';process.resourcesPath=${JSON.stringify(resources)};await import(pathToFileURL(${JSON.stringify(path.join(resources,'app/lib/suite-runtimes.js'))}).href);for(const name of ['bun','lark-cli','mihomo']){const r=spawnSync(name,[name==='mihomo'?'-v':'--version'],{encoding:'utf8',env:process.env});if(r.error||r.status!==0)throw r.error||Error(name+' failed');console.log(name+': '+r.stdout.trim())}`);
 await command(path.join(resources,'runtime/primary-runtime/dependencies/node/bin/node.exe'),[probe],{env:{PATH:path.join(process.env.WINDIR,'System32')+';'+process.env.WINDIR},timeout:120000});
 const sums=path.join(output,'SHA256SUMS.txt');fs.writeFileSync(sums,`${await hash(bootstrap)}  ${path.basename(bootstrap)}\n${report.sha256}  ${path.basename(payload)}\n`);
 const notes=path.join(output,'notes.md');fs.writeFileSync(notes,`Windows x64 在线安装器。优先下载 **DeepSeek-Harness-Online-Setup-win-x64.exe**，运行后会下载约 ${Math.ceil(fs.statSync(payload).size/1e6)} MB 安装内容，校验后打开可选择安装目录的安装界面。\n\n包含行研插件 v0.13.2；完整运行依赖保留，已去除重复 CLI 文件。需要网络连接和 Windows .NET Framework 4.5+（Windows 10/11 通常已内置）。安装器未使用发布者证书签名。账号需自行登录，已有非空 Profile 保留。附件中的大型 EXE 是安装负载，也可用于离线安装。Mac 不在此次发布范围。\n\n完整负载来自已通过 Windows 构建、CLI PATH、行研宿主及原生模块检查的运行 ${process.env.SOURCE_RUN}。本轮另验证校验成功、损坏负载拒绝、窗口创建，以及公开下载地址的真实下载校验。\n`);

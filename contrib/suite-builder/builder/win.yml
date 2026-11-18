@@ -4,7 +4,7 @@ electronVersion: 44.7.0
 asar: false
 npmRebuild: false
 buildDependenciesFromSource: false
-compression: normal
+compression: maximum
 publish: null
 directories:
   output: ../dist
