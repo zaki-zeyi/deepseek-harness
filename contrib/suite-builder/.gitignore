@@ -11,3 +11,4 @@ vendor/
 __pycache__/
 **/__pycache__/
 *.log
+tools/inno7/

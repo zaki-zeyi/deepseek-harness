@@ -18,6 +18,10 @@ for(const [folder,target,extension,reportName] of [['windows','win32-x64','.exe'
   const plugins=report.plugins||report.inventory?.plugins||[];
   if(report.target!==target||!plugins.some(p=>p.name==='dsh-industry-research'&&p.version===expectedIndustry))throw Error('Unexpected target or industry plugin version');
   if(target==='win32-x64'&&(report.status!=='built'||!report.checks.some(c=>c.name==='industry-research-registered-and-ready'&&c.status==='passed')))throw Error('Windows runtime checks incomplete');
+  if(target==='win32-x64'){
+    if(report.installerEngine!=='inno'||fs.statSync(packages[0]).size>=600000000)throw Error('Expected an Inno offline installer below 600 MB');
+    for(const name of ['installer-under-600mb','installer-archive-integrity','offline-installer-unicode-custom-path','offline-installer-reinstall','offline-installer-uninstall','inno-legacy-installation-migration'])if(!report.checks.some(c=>c.name===name&&c.status==='passed'))throw Error('Windows installer acceptance missing: '+name);
+  }
   if(target==='darwin-arm64'&&(!report.macRuntimeTested||report.status!=='packaged-native-verified'))throw Error('Mac native checks incomplete');
   const hash=crypto.createHash('sha256');for await(const chunk of fs.createReadStream(packages[0]))hash.update(chunk);
   const digest=hash.digest('hex');if(digest!==report.sha256)throw Error('Installer SHA-256 mismatch');

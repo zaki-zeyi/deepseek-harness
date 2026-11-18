@@ -9,6 +9,7 @@ function files(dir){return fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e
 const entries=files(root),packages=entries.filter(f=>f.endsWith('.exe')),reports=entries.filter(f=>path.basename(f)==='report.json');
 if(packages.length!==1||reports.length!==1)throw Error('Expected one Windows installer and report');
 const payload=packages[0],report=JSON.parse(fs.readFileSync(reports[0]));
+if(report.installerEngine==='inno')throw Error('Inno packages are complete offline installers; the legacy NSIS online wrapper is incompatible');
 if(report.target!=='win32-x64'||report.status!=='built'||!report.checks.some(c=>c.name==='deduplicated-native-PATH-launch'&&c.status==='passed')||!report.checks.some(c=>c.name==='industry-research-registered-and-ready'&&c.status==='passed'))throw Error('Windows runtime verification missing');
 if(!report.plugins.some(p=>p.name==='dsh-industry-research'&&p.version==='0.13.2'))throw Error('Unexpected industry plugin');
 async function hash(file){const h=crypto.createHash('sha256');for await(const chunk of fs.createReadStream(file))h.update(chunk);return h.digest('hex')}

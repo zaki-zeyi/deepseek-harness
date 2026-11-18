@@ -40,8 +40,9 @@ jobs:
           $report=Get-Content $reportFile.FullName -Raw | ConvertFrom-Json
           if((Get-FileHash $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $report.sha256){throw 'Payload hash mismatch'}
           $installed=Join-Path $env:RUNNER_TEMP ('dsh-size-'+$env:GITHUB_RUN_ID)
-          $process=Start-Process -FilePath $package.FullName -ArgumentList @('/S',('/D='+$installed)) -WindowStyle Hidden -Wait -PassThru
-          if($process.ExitCode -ne 0){throw 'Install failed'}
+          $engine=if($report.installerEngine){$report.installerEngine}else{'nsis'}
+          $env:DSH_HOME=Join-Path $env:RUNNER_TEMP ('dsh-size-home-'+$env:GITHUB_RUN_ID)
+          & ./contrib/suite-builder/automation/windows-install.ps1 -Installer $package.FullName -Destination $installed -Engine $engine -RequireFreshSuite
           $resources=Join-Path $installed 'resources'
           $profile=Join-Path $resources 'seed-profile'
           if(!(Test-Path -LiteralPath $profile)){

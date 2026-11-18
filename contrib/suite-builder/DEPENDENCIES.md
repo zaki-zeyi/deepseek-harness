@@ -9,7 +9,7 @@ English | [中文](DEPENDENCIES.zh.md)
 
 ## Summary
 
-Industry research no longer requires Codex CLI, and current Windows build rules omit that global runtime. The measurements below retain the published older package's baseline; the new complete offline installer's size must come from its own build report.
+Industry research no longer requires Codex CLI, and current Windows build rules omit that global runtime. The tables measure the current Windows offline payload; its release report records the download size.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ Industry research no longer requires Codex CLI, and current Windows build rules 
 <a id="plugin-dependencies"></a>
 ## Plugin dependencies
 
-Sizes below are the audited Windows baseline, including private bundled and exclusive npm dependencies. They are uncompressed file sizes in decimal MB, not download sizes or a new measurement of the revised industry plugin.
+Sizes include private bundled and exclusive npm dependencies, measured as installed file sizes in decimal MB, not download sizes.
 
 | Plugin | Audited version | Plugin and npm dependencies | Target external programs |
 |---|---|---:|---|
@@ -30,10 +30,10 @@ Sizes below are the audited Windows baseline, including private bundled and excl
 | IM (`@xmanrui/dsh-im`) | 5.10.0 | 78.26 MB | None separately bundled |
 | Floating ball (`dsh-orb`) | 0.2.1 | 149.46 MB | Orb Electron |
 | Free models (`dsh-our-free-model`) | 2.8.3 | 34.14 MB | Bun for the OpenCode free lane; mihomo for its egress support |
-| Industry research (`dsh-industry-research`) | 0.13.2 baseline | 115.37 MB | Lark CLI; Codex CLI is removed from the current industry dependency requirement |
-| Codex subscription (`dsh-codex-subscription`) | 3.2.19 | 3.30 MB | Basic OAuth/model access does not require the separately bundled Codex CLI |
+| Industry research (`dsh-industry-research`) | 0.13.2 | 115.37 MB | Lark CLI; Codex CLI is removed from the current industry dependency requirement |
+| Codex subscription (`dsh-codex-subscription`) | 3.2.21 | 3.24 MB | Basic OAuth/model access does not require the separately bundled Codex CLI |
 
-Shared profile dependencies total 1.77 MB and are counted once. The plugin/profile total is 386.74 MB. Dependencies supplied by Harness itself are excluded. The subscription plugin's optional subtask feature manages a separate profile-owned CLI; it does not establish a requirement for the old package's global Codex CLI.
+Shared profile dependencies total 1.77 MB and are counted once. The plugin/profile total is 386.68 MB. Dependencies supplied by Harness itself are excluded. The subscription plugin's optional subtask feature manages a separate profile-owned CLI; it does not establish a requirement for the old package's global Codex CLI.
 
 <a id="external-programs"></a>
 ## External programs
@@ -45,18 +45,17 @@ Shared profile dependencies total 1.77 MB and are counted once. The plugin/profi
 | mihomo | 61.23 MB | Free-model plugin's egress support |
 | Lark CLI | 50.54 MB | Industry research's Feishu authentication and operations |
 | Git | 96.24 MB | Shared command-line tool; not assigned exclusively to one plugin |
-| Codex CLI | 515.19 MB | Legacy payload in the published older installer; removed from current Windows builds and unnecessary for basic industry and subscription features |
 
-These external programs are not included in the plugin table. Orb plus its Electron runtime totals approximately 533.11 MB. The unchanged published Windows payload is 906,587,873 bytes compressed, and its online bootstrapper is 13,312 bytes; editing this inventory changes neither file.
+External programs are excluded from the plugin table. Orb and its Electron runtime total about 533.11 MB. Global Codex CLI is 0 MB. Installed Bun includes identical bun/bunx entries; the Inno archive stores identical content once and restores both entries.
 
 <a id="measurement-and-optional-features"></a>
 ## Measurement and optional features
 
-Measurements come from the [Windows size audit](https://github.com/zaki-zeyi/deepseek-harness/actions/runs/44070796774), using the same payload as the [Windows online installer release](https://github.com/zaki-zeyi/deepseek-harness/releases/tag/community-windows-online-1.1.0-build-1). Shared dependency attribution reconciles with all measured profile modules; rounded rows may differ from totals.
+The [size audit](automation/audit-plugin-sizes.mjs) measures the current complete offline payload; release attachments include its JSON. Shared dependency attribution reconciles with all measured profile modules; rounded rows may differ from totals.
 
 Orb voice model weights are not bundled: 0 MB in the audited payload. Voice is off by default; the user chooses whether to enable it and download models. Voice inference libraries remain available and are distinct from model weights. The build checks reject packaged Orb model weights.
 
-The [plugin selection list](plugins.md), [pinned input sources](automation/ci-inputs.json), and [runtime rules](automation/runtime-rules.json) control builds. Current Windows rules omit global Codex CLI and pin subscription to 3.2.21; the measurements above describe the older package and do not establish that a newer installer has been published.
+The [plugin selection list](plugins.md), [pinned input sources](automation/ci-inputs.json), and [runtime rules](automation/runtime-rules.json) control builds. Current Windows rules omit global Codex CLI and pin subscription to 3.2.21; plugin and runtime sizes are separate and cannot be summed to obtain the compressed installer download size.
 
 <a id="dev-note"></a>
 ## Dev Note

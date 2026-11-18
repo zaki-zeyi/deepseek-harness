@@ -35,6 +35,8 @@ kind: "package-library"
 [运行依赖规则](automation/runtime-rules.json) 固定已适配插件版本及额外二进制。npm 依赖和缺失的必需 peer 自动解析；发现新的外部程序需要补充适配器，未审核版本或新的 peer 冲突会阻止构建。已有预设的 peer 警告保留在报告中，不执行 README 中任意安装命令。需要保持版本时应在列表固定版本；只修改其他仓库的 README 不会触发本仓库工作流。
 Windows 构建不再携带过时的全局 Codex CLI，将已准备的插件目录与应用一起安装，完整离线安装包达到 600,000,000 字节即构建失败。订阅插件自身的可选 CLI 依赖另计。手动选择 `windows_only` 可只上传 Windows 产物，不创建 Windows/Mac 合并发布。
 
+Windows 安装器使用 [installer-toolchain.json](automation/installer-toolchain.json) 中经过 SHA-256 固定校验的便携式 Inno Setup 7.1.1 编译器。安装向导支持中文及长路径、目录选择、安装进度和当前用户卸载。相同负载字节只存一份，安装后的各个目标位置全部保留。同目录更新会识别旧 NSIS 整合版，只在成功安装后移交旧卸载注册；其他目录及无关应用保留。静默安装参数为 `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR="C:\自定义目录\Harness"`。
+
 <a id="model-experience"></a>
 ## 模型体验
 
@@ -50,7 +52,7 @@ Windows 探针覆盖内置 CLI 启动、原生模块及 Desktop Host 注册。Ma
 <a id="developer-checks"></a>
 ## 开发检查
 
-执行 `npm test` 检查列表解析、暂存目录边界、下载失败、子进程失败、Profile 保护和 Windows 安装路径参数。Windows 构建会在真实 Desktop Host 中验收新旧 Profile，再将完整离线 EXE 安装到含中文和空格的目录，使用安装后的文件重复验收，并卸载测试副本。Actions 还会构建并检查各平台的实际安装包；单元测试通过不能替代安装包验收。生成的 `build`、`dist` 和 `downloads` 目录不参与双语源码文档发现。
+执行 `npm test` 检查列表解析、暂存目录边界、下载失败、子进程失败、Profile 保护和 Windows 安装路径参数。Windows 安装包验收要求尚未安装整合版的干净环境，会拒绝替换已有应用。构建会在真实 Desktop Host 中验收新旧 Profile，将完整离线 EXE 安装到含中文和空格的目录并使用隔离的 DSH 主目录，保留用户额外文件完成覆盖安装，逐一核对全部已安装负载与源文件的 SHA-256，再使用安装后的文件重复运行验收，最后卸载测试副本并确认全部负载已删除、用户额外文件保留。隔离的原生迁移探针覆盖匹配、无关及不同目录的旧版注册。安装等待上限为 30 分钟。Actions 还会构建并检查各平台的实际安装包；单元测试通过不能替代安装包验收。生成的 `build`、`dist` 和 `downloads` 目录不参与双语源码文档发现。
 
 <a id="dev-note"></a>
 ## 开发说明
