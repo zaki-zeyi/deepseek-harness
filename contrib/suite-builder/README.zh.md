@@ -33,6 +33,7 @@ kind: "package-library"
 ## 运行依赖规则
 
 [运行依赖规则](automation/runtime-rules.json) 固定已适配插件版本及额外二进制。npm 依赖和缺失的必需 peer 自动解析；发现新的外部程序需要补充适配器，未审核版本或新的 peer 冲突会阻止构建。已有预设的 peer 警告保留在报告中，不执行 README 中任意安装命令。需要保持版本时应在列表固定版本；只修改其他仓库的 README 不会触发本仓库工作流。
+Windows 构建不再携带过时的全局 Codex CLI，将未压缩的插件种子与应用统一压缩，最终安装包达到 600,000,000 字节即构建失败。此限制覆盖完整下载负载。订阅插件自身的可选 CLI 依赖另计。手动选择 `windows_only` 可只上传 Windows 产物，不创建 Windows/Mac 合并发布。
 
 <a id="model-experience"></a>
 ## 模型体验

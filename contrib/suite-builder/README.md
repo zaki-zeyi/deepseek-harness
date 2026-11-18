@@ -33,6 +33,7 @@ This independent tool packages Harness desktop apps with the plugins in [plugins
 ## Runtime rules
 
 [Runtime rules](automation/runtime-rules.json) pin reviewed plugin versions and additional binaries. npm dependencies and missing required peers are resolved automatically. A newly detected external program requires a runtime adapter; an unreviewed version or a new peer conflict stops the build. Existing preset peer warnings remain in reports. Arbitrary README installation commands are never executed. To retain a version, pin it in the list; changing a repository README alone does not trigger this repository's workflow.
+Windows builds omit the obsolete global Codex CLI, compress the stored plugin seed with the application, and fail if the final installer reaches 600,000,000 bytes. This limit applies to the complete downloaded payload. The subscription plugin's own optional CLI dependency is separate. Manual `windows_only` runs upload Windows artifacts without creating a combined Windows/Mac release.
 
 <a id="model-experience"></a>
 ## Model Experience
