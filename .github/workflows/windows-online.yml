@@ -1,0 +1,46 @@
+name: Windows online installer
+on:
+  push:
+    paths:
+      - .github/workflows/windows-online.yml
+      - contrib/suite-builder/automation/windows-online/**
+      - contrib/suite-builder/automation/build-windows-online.mjs
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Verified Windows package run ID
+        required: true
+        default: '44065896948'
+      artifact_name:
+        description: Verified Windows artifact name
+        required: true
+        default: suite-win32-x64-10
+permissions:
+  contents: write
+  actions: read
+jobs:
+  online:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: contrib/suite-builder
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.source_run || '44065896948' }}
+          name: ${{ inputs.artifact_name || 'suite-win32-x64-10' }}
+          path: online-input
+      - name: Build, validate and publish online installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ inputs.source_run || '44065896948' }}
+        run: node contrib/suite-builder/automation/build-windows-online.mjs online-input

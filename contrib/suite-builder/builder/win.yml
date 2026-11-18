@@ -1,0 +1,36 @@
+appId: com.deepseek.dsh.suite
+productName: DeepSeek Harness Suite
+electronVersion: 44.7.0
+asar: false
+npmRebuild: false
+buildDependenciesFromSource: false
+compression: maximum
+publish: null
+directories:
+  output: ../dist
+  buildResources: ../builder
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  executableName: DeepSeek Harness Suite
+  signAndEditExecutable: true
+  forceCodeSigning: false
+nsis:
+  differentialPackage: false
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: DeepSeek Harness Suite
+  uninstallDisplayName: DeepSeek Harness Suite
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  language: "2052"
+  installerLanguages:
+    - zh_CN
+    - en_US
+  artifactName: DeepSeek-Harness-Suite-${version}-win-${arch}.${ext}

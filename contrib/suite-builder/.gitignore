@@ -1,0 +1,14 @@
+node_modules/
+**/node_modules/
+inputs.local.json
+app-win/
+seed-win/
+build/
+dist/
+downloads/
+work/
+vendor/
+__pycache__/
+**/__pycache__/
+*.log
+tools/inno7/
