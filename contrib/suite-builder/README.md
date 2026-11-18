@@ -63,6 +63,8 @@ Configure repository variables `DSH_SIGNING_CERT_SHA1` (40-character certificate
 
 New releases remain blocked until a real certificate is configured and an actual signed build passes. Script tests establish failure handling, not certificate acceptance or Smart App Control acceptance. Qualify the final downloaded installer and an installed application's first launch on a clean Windows machine with Smart App Control enabled before distributing it. The existing macOS local ad-hoc signing remains separate and does not provide Apple Developer ID notarization.
 
+For an explicitly requested local MSI experiment, run electron-builder from `tools` with `--win msi --x64 --publish never --prepackaged <prepared-app-directory> --config ../builder/win-msi-test.yml --config.extraMetadata.version=1.1.0`. The unsigned experiment has a separate application ID, upgrade code, product name and default folder (`DSH-MSI-Test`), creates no shortcuts and does not launch after installation. It preserves the prepared payload and is not eligible for the signed release publisher. An MSI format change alone does not establish Smart App Control acceptance.
+
 <a id="dev-note"></a>
 ## Dev Note
 

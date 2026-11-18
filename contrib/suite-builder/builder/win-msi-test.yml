@@ -1,0 +1,25 @@
+# Explicit experimental target; this does not relax the signed release configuration.
+appId: com.deepseek.dsh.suite.msi-test
+productName: DeepSeek Harness Suite MSI Test
+electronVersion: 44.7.0
+asar: false
+npmRebuild: false
+buildDependenciesFromSource: false
+compression: normal
+publish: null
+msiProjectCreated: ./msi-test-project.cjs
+win:
+  target:
+    - target: msi
+      arch: [x64]
+  executableName: DeepSeek Harness Suite
+  signAndEditExecutable: false
+  signExecutable: false
+  forceCodeSigning: false
+msi:
+  oneClick: false
+  perMachine: false
+  runAfterFinish: false
+  createDesktopShortcut: false
+  createStartMenuShortcut: false
+  artifactName: DeepSeek-Harness-Suite-${version}-win-${arch}-MSI-Test.${ext}
