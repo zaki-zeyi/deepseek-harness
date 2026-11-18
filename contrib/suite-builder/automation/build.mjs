@@ -142,6 +142,7 @@ async function main() {
   report.stages.push('resolved');save();
   log(`插件已解析：${report.plugins.map(p=>p.name+'@'+p.version).join(', ')}`);
   if(process.argv.includes('--plan')) {report.status='planned';save();return;}
+  await run('pwsh',['-NoProfile','-NonInteractive','-File',path.join(__dirname,'windows-sign.ps1'),'-Mode','Preflight']);
   if(previous?.stages.includes('staged-and-checked')) {
     report.plugins=previous.plugins;report.checks=previous.checks;report.addedPeers=previous.addedPeers;report.legacyPeerWarnings=previous.legacyPeerWarnings;report.stages=previous.stages;
     await packageInstaller();return;
@@ -281,10 +282,28 @@ async function packageInstaller() {
   fs.writeFileSync(inventoryPath,JSON.stringify(inventory,null,2));
   report.disabledFeatures=rules.disabledFeatures;save();
   log('生成支持自定义安装目录的 NSIS 安装器…');
+  const signingScript=path.join(__dirname,'windows-sign.ps1');
+  const signingArgs=['-NoProfile','-NonInteractive','-File',signingScript];
+  await run('pwsh',[...signingArgs,'-Mode','SignTree','-Target',app],{timeout:1800000});
+  const applicationExecutable=path.join(app,'DeepSeek Harness Suite.exe');
+  await run('pwsh',[...signingArgs,'-Mode','SignGenerated','-Target',applicationExecutable]);
   fs.mkdirSync(out,{recursive:true});
   const builder=path.join(root,'tools/node_modules/electron-builder/out/cli/cli.js');
-  await run(process.execPath,[builder,'--win','--x64','--publish','never','--prepackaged',app,'--config',path.join(root,'builder/win.yml'),`--config.directories.output=${out}`,`--config.extraMetadata.version=${rules.version}`],{cwd:path.join(root,'tools'),env:{CSC_IDENTITY_AUTO_DISCOVERY:'false',ELECTRON_BUILDER_COMPRESSION_LEVEL:'3'}});
+  const receiptsPath=path.join(runRoot,'signing-receipts.jsonl');
+  fs.writeFileSync(receiptsPath,'');
+  await run(process.execPath,[builder,'--win','--x64','--publish','never','--prepackaged',app,'--config',path.join(root,'builder/win.yml'),`--config.directories.output=${out}`,`--config.extraMetadata.version=${rules.version}`],{cwd:path.join(root,'tools'),env:{CSC_IDENTITY_AUTO_DISCOVERY:'false',ELECTRON_BUILDER_COMPRESSION_LEVEL:'3',DSH_SIGNING_RECEIPTS:receiptsPath}});
   const artifact=files(out).find(p=>p.endsWith('.exe'));if(!artifact)throw Error('构建器没有输出安装器');
+  // Re-check after builder resource edits and before computing the released digest.
+  const signatureReport=path.join(runRoot,'windows-signatures.json');
+  await run('pwsh',[...signingArgs,'-Mode','VerifyTree','-Target',app,'-ReportPath',signatureReport],{timeout:1800000});
+  await run('pwsh',[...signingArgs,'-Mode','VerifyFile','-Target',artifact]);
+  await run('pwsh',[...signingArgs,'-Mode','VerifyFile','-Target',applicationExecutable]);
+  const signatures=JSON.parse(fs.readFileSync(signatureReport,'utf8').replace(/^\uFEFF/,''));
+  const receipts=fs.readFileSync(receiptsPath,'utf8').trim().split(/\r?\n/).filter(Boolean).map(line=>JSON.parse(line));
+  if(!receipts.some(r=>/uninstall/i.test(path.basename(r.file))))throw Error('缺少内嵌卸载器的签名验签记录');
+  const installerHash=await hash(artifact);
+  if(!receipts.some(r=>path.resolve(r.file)===path.resolve(artifact)&&r.sha256===installerHash))throw Error('安装器最终签名记录不匹配');
+  report.checks.push({name:'windows-authenticode-signatures',status:'passed',files:signatures.files.length,certificate:process.env.DSH_SIGNING_CERT_SHA1,installerSha256:installerHash,embeddedUninstaller:true});
   await run(seven,['t',artifact,'-bso0','-bsp0'],{capture:true});
   report.checks.push({name:'installer-archive-integrity',status:'passed'});
   report.artifact=artifact;report.sha256=await hash(artifact);report.status='built';report.finished=new Date().toISOString();save();

@@ -18,6 +18,7 @@ This independent tool packages Harness desktop apps with the plugins in [plugins
 - [Model Experience](#model-experience)
 - [Known Limitations](#known-limitations)
 - [Developer checks](#developer-checks)
+- [Windows release signing](#windows-release-signing)
 - [Dev Note](#dev-note)
 
 <a id="build-tutorial"></a>
@@ -50,6 +51,17 @@ Users authorize their own accounts. Existing nonempty desktop Profiles are prese
 ## Developer checks
 
 Run `npm test` for list parsing, staging boundaries, download failures, subprocess failures and existing-profile protection. Actions additionally builds and checks each platform's actual package; successful unit tests alone do not establish installer acceptance.
+
+<a id="windows-release-signing"></a>
+## Windows release signing
+
+The Windows slim workflow requires a CA-issued code-signing certificate and an accessible private key on a dedicated, trusted Windows signing runner. The certificate may use a hardware token or a certificate-store-compatible cloud HSM. A self-signed certificate does not establish public trust for Smart App Control. Certificate purchase, identity verification, hardware or cloud enrollment, middleware installation and runner registration are operator steps; this repository does not obtain certificates or change Windows security settings.
+
+Configure repository variables `DSH_SIGNING_CERT_SHA1` (40-character certificate thumbprint), `DSH_WINDOWS_SIGNING_RUNNER` (JSON labels, for example `["self-hosted","Windows","X64","suite-signing"]`), and optionally `DSH_SIGNING_STORE` (`CurrentUser` by default, or `LocalMachine`), `DSH_SIGNTOOL_PATH` (Windows SDK SignTool path) and `DSH_SIGNING_TIMESTAMP_URL` (RFC 3161 service; defaults to DigiCert). The signing runner's Windows account must be authorized to use the key. Keep private keys and token PINs outside Git and do not put them in public variables. Run only reviewed branch code on a runner with signing-key access. Direct Azure Artifact Signing API authentication is not wired into this certificate-store adapter.
+
+`pwsh -NoProfile -File automation/windows-sign.ps1 -Mode Preflight` checks certificate validity, Code Signing usage, CA chain, revocation and SignTool without signing or trying a token PIN. Missing credentials stop CI before desktop downloads. The build signs unsigned PE files, including DLLs and Node native modules, and preserves valid timestamped upstream signatures. Invalid input signatures stop the build. The electron-builder hook signs the generated application executable, NSIS installer and embedded uninstaller with SHA-256 and an RFC 3161 timestamp. Signing errors stop the batch without automatic hardware retries. Final verification checks every staged PE and the installer; the publisher requires matching signature evidence and the final installer digest.
+
+New releases remain blocked until a real certificate is configured and an actual signed build passes. Script tests establish failure handling, not certificate acceptance or Smart App Control acceptance. Qualify the final downloaded installer and an installed application's first launch on a clean Windows machine with Smart App Control enabled before distributing it. The existing macOS local ad-hoc signing remains separate and does not provide Apple Developer ID notarization.
 
 <a id="dev-note"></a>
 ## Dev Note
