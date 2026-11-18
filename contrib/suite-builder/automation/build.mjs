@@ -9,6 +9,7 @@ const { spawn } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 import { parseList, hash, inside, files } from './lib.mjs';
 import {assertNoOrbVoiceModels} from './profile-guard.mjs';
+import {patchWindowsStartup} from './windows-startup.mjs';
 const root = path.resolve(__dirname, '..');
 const rules = JSON.parse(fs.readFileSync(path.join(__dirname,'runtime-rules.json')));
 const npm = path.join(path.dirname(process.execPath),'node_modules/npm/bin/npm-cli.js');
@@ -31,7 +32,7 @@ if(previous?.status==='building') {
   const owner=fs.existsSync(oldLock)?Number(fs.readFileSync(oldLock,'utf8')):0;
   if(!alive(owner))previous.status='failed';
 }
-if(previous && (previous.status!=='failed'||!fs.existsSync(path.join(runRoot,'manage.mjs'))))throw Error('只能恢复已完成模板复制的失败构建');
+if(previous && ((previous.status!=='failed'&&!(previous.status==='built'&&process.argv.includes('--repackage')))||!fs.existsSync(path.join(runRoot,'manage.mjs'))))throw Error('只能恢复失败构建，或用 --repackage 重新封装已完成构建');
 const home = path.join(runRoot,'home');
 const profile = path.join(home,'profiles/desktop');
 const app = path.join(runRoot,'app');
@@ -139,13 +140,14 @@ async function main() {
   for(const input of parseList(fs.readFileSync(list,'utf8')))report.plugins.push(await resolvePlugin(input));
   if(new Set(report.plugins.map(p=>p.name)).size!==report.plugins.length)throw Error('多个输入解析到了同一个插件');
   if(previous && JSON.stringify(previous.plugins.map(p=>[p.name,p.version]))!==JSON.stringify(report.plugins.map(p=>[p.name,p.version])))throw Error('恢复构建的插件版本发生变化，请重新构建');
-  report.stages.push('resolved');save();
   log(`插件已解析：${report.plugins.map(p=>p.name+'@'+p.version).join(', ')}`);
-  if(process.argv.includes('--plan')) {report.status='planned';save();return;}
+  if(process.argv.includes('--plan')) {report.status='planned';report.stages.push('resolved');save();return;}
   if(previous?.stages.includes('staged-and-checked')) {
-    report.plugins=previous.plugins;report.checks=previous.checks;report.addedPeers=previous.addedPeers;report.legacyPeerWarnings=previous.legacyPeerWarnings;report.stages=previous.stages;
+    report.plugins=previous.plugins;report.checks=previous.checks;report.addedPeers=previous.addedPeers;report.legacyPeerWarnings=previous.legacyPeerWarnings;report.stages=previous.stages;report.runtimeDeduplication=previous.runtimeDeduplication;
+    save();
     await packageInstaller();return;
   }
+  report.stages.push('resolved');save();
   log('复制不可变的核心模板和独立构建 Profile…');
   if(!resume) {
     fs.cpSync(baseApp,app,{recursive:true});
@@ -237,14 +239,16 @@ async function main() {
   await run(node,[path.join(root,'scripts/audit_dependencies.mjs'),profile,resources],{env:cleanEnv,capture:true});
   log('启动真实 Desktop Host，验证插件服务注册…');
   report.checks.push(...await (await import('./verify-host.mjs')).default({node,payload,profile,resources,plugins:report.plugins,logFile:path.join(runRoot,'host-smoke.log'),env:{...cleanEnv,DSH_ORB_ELECTRON_PATH:path.join(deps,'orb-electron/electron.exe'),OUR_FREE_MODEL_BUN:nativeCommands.bun}}));
-  log('生成插件种子包…');
+  log('准备可直接使用的插件目录…');
   if(fs.existsSync(path.join(resources,'seed-profile.zip')))fs.unlinkSync(path.join(resources,'seed-profile.zip'));
-  // NSIS compresses the seed and application together; avoid nested compression.
-  await run(seven,['a','-tzip','-mx=0',path.join(resources,'seed-profile.zip'),'.','-xr!.git','-xr!.pnpm','-xr!.bin','-xr!.modules.yaml','-xr!.plugin-manager'],{cwd:profile,capture:true});
-  // The previous template zip must not retain files of removed plugins.
-  report.stages.push('staged-and-checked');save();
+  const seedOutput=path.join(resources,'seed-profile');
+  if(fs.existsSync(seedOutput))throw Error('Prepared seed directory already exists; use a fresh build');
+  const excluded=new Set(['.git','.pnpm','.bin','.modules.yaml','.plugin-manager','.pnpm-workspace-state-v1.json']);
+  fs.cpSync(profile,seedOutput,{recursive:true,dereference:true,filter:source=>!path.relative(profile,source).split(path.sep).some(part=>excluded.has(part))});
+  fs.copyFileSync(path.join(root,'automation/templates/seed-profile-windows.js'),path.join(payload,'lib/seed-profile.js'));
   const inventory={plugins:report.plugins,addedPeers:report.addedPeers,legacyPeerWarnings:report.legacyPeerWarnings,runtimes:rules.npmRuntimes,git:rules.git,orb:selected.has('dsh-orb')?rules.orb:null,disabledFeatures:rules.disabledFeatures,checks:report.checks};
   fs.writeFileSync(path.join(resources,'suite-inventory.json'),JSON.stringify(inventory,null,2));
+  report.stages.push('staged-and-checked');save();
   await packageInstaller();
 }
 async function packageInstaller() {
@@ -278,24 +282,36 @@ async function packageInstaller() {
     if(warnings.length)report.checks.push({name:'host-runtime-warnings',status:'warning',messages:warnings});
   }
   const inventoryPath=path.join(resources,'suite-inventory.json');
+  fs.copyFileSync(path.join(root,'automation/templates/seed-profile-windows.js'),path.join(payload,'lib/seed-profile.js'));
+  log('验证首次启动注册和已有 Profile 补充插件…');
+  const mainFile=path.join(payload,'lib/main.js');
+  fs.writeFileSync(mainFile,patchWindowsStartup(fs.readFileSync(mainFile,'utf8')));
+  const {verifyWindowsProfiles}=await import('./verify-windows-profile.mjs');
+  const node=path.join(resources,'runtime/primary-runtime/dependencies/node/bin/node.exe');
+  const env={PATH:[path.dirname(node),path.join(deps,'bin'),path.join(deps,'node_modules/bun/bin'),path.join(deps,'node_modules/@larksuite/cli/bin'),path.join(process.env.WINDIR,'System32'),process.env.WINDIR].join(';'),DSH_ORB_ELECTRON_PATH:path.join(deps,'orb-electron/electron.exe'),OUR_FREE_MODEL_BUN:path.join(deps,'node_modules/bun/bin/bun.exe')};
+  report.checks=report.checks.filter(c=>!c.name.startsWith('suite-profile-')&&!c.name.startsWith('fresh-')&&!c.name.startsWith('existing-'));
+  report.checks.push(...await verifyWindowsProfiles({resources,payload,node,plugins:report.plugins,env}));
   const inventory=JSON.parse(fs.readFileSync(inventoryPath));inventory.checks=report.checks;inventory.mihomo=rules.mihomo;inventory.disabledFeatures=rules.disabledFeatures;
   fs.writeFileSync(inventoryPath,JSON.stringify(inventory,null,2));
   report.disabledFeatures=rules.disabledFeatures;save();
   log('生成支持自定义安装目录的 NSIS 安装器…');
   fs.mkdirSync(out,{recursive:true});
   const builder=path.join(root,'tools/node_modules/electron-builder/out/cli/cli.js');
-  await run(process.execPath,[builder,'--win','--x64','--publish','never','--prepackaged',app,'--config',path.join(root,'builder/win.yml'),`--config.directories.output=${out}`,`--config.extraMetadata.version=${rules.version}`],{cwd:path.join(root,'tools'),env:{CSC_IDENTITY_AUTO_DISCOVERY:'false',ELECTRON_BUILDER_COMPRESSION_LEVEL:'9'}});
+  await run(process.execPath,[builder,'--win','--x64','--publish','never','--prepackaged',app,'--config',path.join(root,'builder/win.yml'),`--config.directories.output=${out}`,`--config.extraMetadata.version=${rules.version}`],{cwd:path.join(root,'tools'),env:{CSC_IDENTITY_AUTO_DISCOVERY:'false',ELECTRON_BUILDER_COMPRESSION_LEVEL:'9'},timeout:45*60*1000});
   const artifact=files(out).find(p=>p.endsWith('.exe'));if(!artifact)throw Error('构建器没有输出安装器');
   await run(seven,['t',artifact,'-bso0','-bsp0'],{capture:true});
   report.checks.push({name:'installer-archive-integrity',status:'passed'});
   report.artifact=artifact;report.artifactBytes=fs.statSync(artifact).size;
   if(report.artifactBytes>=600000000)throw Error(`Windows installer exceeds the 600 MB limit: ${report.artifactBytes} bytes`);
   report.checks.push({name:'installer-under-600mb',status:'passed',bytes:report.artifactBytes,limitBytes:600000000});
+  const {verifyWindowsInstaller}=await import('./verify-windows-installer.mjs');
+  log('验收完整离线安装包的中文自定义路径与内置插件…');
+  report.checks.push(...(await verifyWindowsInstaller(artifact)).checks);
   report.sha256=await hash(artifact);report.status='built';report.finished=new Date().toISOString();save();
   fs.copyFileSync(path.join(runRoot,'report.json'),path.join(out,'report.json'));
   fs.writeFileSync(path.join(out,'SHA256SUMS.txt'),`${report.sha256}  ${path.basename(artifact)}\n`);
   fs.writeFileSync(path.join(root,'dist/automated/latest.json'),JSON.stringify({artifact,sha256:report.sha256,report:path.join(out,'report.json')},null,2));
-  fs.writeFileSync(path.join(out,'使用说明.txt'),'安装向导可选安装目录。首次启动使用内置依赖；ChatGPT、飞书等账号请自行登录。已有非空 DSH Profile 不会覆盖，因此已有用户需在插件管理中安装新增插件。\n未提供功能：'+rules.disabledFeatures.join('\n')+'\n');
+  fs.writeFileSync(path.join(out,'使用说明.txt'),'这是完整离线安装包，运行 EXE 后可选择安装目录，无需下载安装内容。首次启动会显示插件准备进度，自动注册内置插件并补充已有 Profile 中缺失的插件；保留用户版本、禁用选择和账号配置。ChatGPT、飞书等账号请自行登录。语音默认关闭，模型由用户选择启用后下载。\n未提供功能：'+rules.disabledFeatures.join('\n')+'\n');
   log(`完成：${artifact}`);
 }
 const lock=path.join(root,'build/automated/.build-lock');fs.mkdirSync(path.dirname(lock),{recursive:true});

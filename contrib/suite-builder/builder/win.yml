@@ -18,6 +18,7 @@ win:
   signAndEditExecutable: true
   forceCodeSigning: false
 nsis:
+  differentialPackage: false
   oneClick: false
   perMachine: false
   allowElevation: true

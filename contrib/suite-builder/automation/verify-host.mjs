@@ -13,6 +13,7 @@ export default async function verifyHost({node,payload,profile,resources,env,plu
   const output=fs.createWriteStream(logFile);
   const version=JSON.parse(fs.readFileSync(path.join(payload,'package.json'))).version;
   const child=spawn(node,[entry,runtime,profile,primary,path.join(primary,'dependencies/pnpm/bin/pnpm.mjs'),path.join(resources,'dependencies/bin')],{env:{...process.env,...env,DSH_CLIENT_VERSION:version},windowsHide:true,stdio:['ignore','pipe','pipe','ipc']});
+  const closed=new Promise(resolve=>child.once('close',resolve));
   let text='';const record=b=>{const redacted=String(b).replace(/([?&]token=)[^\s&]+/g,'$1[redacted]');text+=redacted;output.write(redacted)};child.stdout.on('data',record);child.stderr.on('data',record);
   try {
     const ready=await new Promise((resolve,reject)=>{
@@ -58,8 +59,9 @@ export default async function verifyHost({node,payload,profile,resources,env,plu
     }
     return checks;
   } finally {
-    if(child.connected)child.send({type:'shutdown'});
-    await new Promise(resolve=>{if(child.exitCode!==null)return resolve();const timer=setTimeout(()=>{child.kill();resolve()},10000);child.once('exit',()=>{clearTimeout(timer);resolve()})});
-    output.end();
+    if(child.connected)child.send({type:'shutdown'},error=>{if(error&&error.code!=='ERR_IPC_CHANNEL_CLOSED')console.error(error.message)});
+    const timer=setTimeout(()=>child.kill(),10000);
+    try{await closed}finally{clearTimeout(timer)}
+    await new Promise(resolve=>output.end(resolve));
   }
 };

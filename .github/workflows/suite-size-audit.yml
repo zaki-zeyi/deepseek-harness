@@ -43,9 +43,12 @@ jobs:
           $process=Start-Process -FilePath $package.FullName -ArgumentList @('/S',('/D='+$installed)) -WindowStyle Hidden -Wait -PassThru
           if($process.ExitCode -ne 0){throw 'Install failed'}
           $resources=Join-Path $installed 'resources'
-          $profile=Join-Path $env:RUNNER_TEMP ('dsh-profile-size-'+$env:GITHUB_RUN_ID)
-          & 'C:\Program Files\7-Zip\7z.exe' x -y ('-o'+$profile) (Join-Path $resources 'seed-profile.zip') | Out-Null
-          if($LASTEXITCODE -ne 0){throw 'Profile extraction failed'}
+          $profile=Join-Path $resources 'seed-profile'
+          if(!(Test-Path -LiteralPath $profile)){
+            $profile=Join-Path $env:RUNNER_TEMP ('dsh-profile-size-'+$env:GITHUB_RUN_ID)
+            & 'C:\Program Files\7-Zip\7z.exe' x -y ('-o'+$profile) (Join-Path $resources 'seed-profile.zip') | Out-Null
+            if($LASTEXITCODE -ne 0){throw 'Profile extraction failed'}
+          }
           node contrib/suite-builder/automation/audit-plugin-sizes.mjs $resources $profile plugin-sizes.json
           if($LASTEXITCODE -ne 0){throw 'Audit failed'}
       - uses: actions/upload-artifact@v7.0.1

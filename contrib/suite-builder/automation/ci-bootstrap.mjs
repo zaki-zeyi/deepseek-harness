@@ -40,10 +40,12 @@ pkg.name='dsh-desktop-suite';pkg.productName='DeepSeek Harness Suite';pkg.versio
 pkg.dshDesktopAppId='com.deepseek.dsh.suite';pkg.dshSuite={core:core.version,plugins:[]};
 delete pkg.dshMandatoryUpdatePolicy;
 fs.writeFileSync(pkgFile,JSON.stringify(pkg,null,2)+'\n');
-const seedLoader=fs.readFileSync(path.join(root,'automation/templates/seed-profile.js'));
+const seedLoader=fs.readFileSync(path.join(root,'automation/templates',process.platform==='win32'?'seed-profile-windows.js':'seed-profile.js'));
 fs.writeFileSync(path.join(payload,'lib/seed-profile.js'),seedLoader);
 const main=path.join(payload,'lib/main.js');
-fs.writeFileSync(main,'import "./seed-profile.js";\n'+fs.readFileSync(main,'utf8'));
+const desktopSource=fs.readFileSync(main,'utf8');
+const {patchWindowsStartup}=await import('./windows-startup.mjs');
+fs.writeFileSync(main,process.platform==='win32'?patchWindowsStartup(desktopSource):'import "./seed-profile.js";\n'+desktopSource);
 const updateFile=path.join(resources,'app-update.yml');if(fs.existsSync(updateFile))fs.unlinkSync(updateFile);
 // The Windows builder extracts this patched archive into its own private staging.
 if(process.platform==='win32'){

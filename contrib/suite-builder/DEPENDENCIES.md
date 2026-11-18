@@ -9,7 +9,7 @@ English | [中文](DEPENDENCIES.zh.md)
 
 ## Summary
 
-The target dependency list follows the maintainer's confirmation: industry research no longer requires Codex CLI. Published installers still contain their previous payload; this document does not remove files or publish a new installer.
+Industry research no longer requires Codex CLI, and current Windows build rules omit that global runtime. The measurements below retain the published older package's baseline; the new complete offline installer's size must come from its own build report.
 
 ## Table of Contents
 
@@ -45,7 +45,7 @@ Shared profile dependencies total 1.77 MB and are counted once. The plugin/profi
 | mihomo | 61.23 MB | Free-model plugin's egress support |
 | Lark CLI | 50.54 MB | Industry research's Feishu authentication and operations |
 | Git | 96.24 MB | Shared command-line tool; not assigned exclusively to one plugin |
-| Codex CLI | 515.19 MB | Legacy payload still present in the published installer; not a current industry dependency; reassess other consumers before removing it from a future build |
+| Codex CLI | 515.19 MB | Legacy payload in the published older installer; removed from current Windows builds and unnecessary for basic industry and subscription features |
 
 These external programs are not included in the plugin table. Orb plus its Electron runtime totals approximately 533.11 MB. The unchanged published Windows payload is 906,587,873 bytes compressed, and its online bootstrapper is 13,312 bytes; editing this inventory changes neither file.
 
@@ -56,7 +56,7 @@ Measurements come from the [Windows size audit](https://github.com/zaki-zeyi/dee
 
 Orb voice model weights are not bundled: 0 MB in the audited payload. Voice is off by default; the user chooses whether to enable it and download models. Voice inference libraries remain available and are distinct from model weights. The build checks reject packaged Orb model weights.
 
-The [plugin selection list](plugins.md), [pinned input sources](automation/ci-inputs.json), and [runtime rules](automation/runtime-rules.json) control builds. They still describe the previously published payload, including Codex CLI; the revised industry dependency requirement above is not a claim that those build rules or release assets have already been trimmed.
+The [plugin selection list](plugins.md), [pinned input sources](automation/ci-inputs.json), and [runtime rules](automation/runtime-rules.json) control builds. Current Windows rules omit global Codex CLI and pin subscription to 3.2.21; the measurements above describe the older package and do not establish that a newer installer has been published.
 
 <a id="dev-note"></a>
 ## Dev Note
