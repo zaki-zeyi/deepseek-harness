@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.macos_only && '[{"target":"darwin-arm64","runner":"macos-26","shell":"bash"}]' || inputs.windows_only && '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"}]' || '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"},{"target":"darwin-arm64","runner":"macos-15","shell":"bash"}]') }}
+        include: ${{ fromJSON(inputs.macos_only && '[{"target":"darwin-arm64","runner":"macos-15","shell":"bash"}]' || inputs.windows_only && '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"}]' || '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"},{"target":"darwin-arm64","runner":"macos-15","shell":"bash"}]') }}
     defaults:
       run:
         working-directory: contrib/suite-builder
