@@ -53,7 +53,7 @@ def verify_archive(archive, plugins, orb):
             raise RuntimeError('Obsolete global Codex CLI is bundled')
         if not orb and any('/node_modules/dsh-orb/' in n or '/dependencies/orb-electron/' in n for n in names):
             raise RuntimeError('Orb removal did not remove its payload')
-        binaries = ['runtime/primary-runtime/dependencies/node/bin/node', 'dependencies/node_modules/bun-target/bin/bun', 'dependencies/bin/mihomo']
+        binaries = ['runtime/primary-runtime/dependencies/node/bin/node', 'dependencies/node_modules/bun-target/package/bin/bun', 'dependencies/bin/mihomo']
         if orb:
             binaries.append('dependencies/orb-electron/Electron.app/Contents/MacOS/Electron')
         for name in binaries:
@@ -92,7 +92,7 @@ def main():
     inv['target'] = 'darwin-arm64'
     inv['voiceModelsBundled'] = False
     npm_payload('@oven/bun-darwin-aarch64', '1.4.4', deps / 'node_modules/bun-target')
-    bun = deps / 'node_modules/bun-target/bin/bun'
+    bun = deps / 'node_modules/bun-target/package/bin/bun'
     macho(bun, 'arm64')
     bun.chmod(0o755)
     (bin_dir / 'bun').symlink_to(os.path.relpath(bun, bin_dir))
