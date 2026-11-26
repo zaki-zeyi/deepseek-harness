@@ -8,6 +8,7 @@ import shutil
 import sys
 import zipfile
 from build_macos import R, BASE, OUT, SEED, WINDOWS_STAGE, input_path, magpie_build, digest, download, asset, extract, npm_payload, macho, ignore
+from mac_executables import prepare_profile_executables
 
 LIMIT = 600_000_000
 ROOT = 'DeepSeek Harness Suite.app/Contents/Resources/'
@@ -54,6 +55,8 @@ def verify_archive(archive, plugins, orb):
         if not orb and any('/node_modules/dsh-orb/' in n or '/dependencies/orb-electron/' in n for n in names):
             raise RuntimeError('Orb removal did not remove its payload')
         binaries = ['runtime/primary-runtime/dependencies/node/bin/node', 'dependencies/node_modules/bun-target/package/bin/bun', 'dependencies/bin/mihomo']
+        inventory = json.loads(z.read(ROOT + 'suite-inventory.json'))
+        binaries.extend('seed-profile/' + name for name in inventory['macExecutableRepairs'])
         if orb:
             binaries.append('dependencies/orb-electron/Electron.app/Contents/MacOS/Electron')
         for name in binaries:
@@ -133,6 +136,7 @@ def main():
             remove_owned(seed, owned)
             remove_owned(deps / 'orb-electron', owned)
         shutil.copytree(SEED, seed, ignore=ignore)
+        inv['macExecutableRepairs'] = prepare_profile_executables(seed)
         magpie = seed / 'node_modules/dsh-our-free-model/vendor/magpie'
         (magpie / 'bin').mkdir(exist_ok=True)
         engine = BASE / 'magpie-darwin-arm64'
