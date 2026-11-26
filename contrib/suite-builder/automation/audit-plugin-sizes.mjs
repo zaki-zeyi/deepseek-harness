@@ -12,6 +12,7 @@ export function treeBytes(root){
 }
 
 export function auditPlugins(profile,names){
+  profile=fs.realpathSync(profile);
   const modules=path.join(profile,'node_modules'),buckets=new Map(),owners=new Map();
   for(const entry of fs.readdirSync(modules,{withFileTypes:true})){
     if(entry.name.startsWith('.'))continue;

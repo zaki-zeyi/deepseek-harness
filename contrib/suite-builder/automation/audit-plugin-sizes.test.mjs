@@ -32,3 +32,20 @@ test('voice libraries are retained but packaged model weights are rejected',()=>
     fs.writeFileSync(path.join(dir,'model.onnx'),'model');assert.throws(()=>assertNoOrbVoiceModels(root),/user opt-in/);
   }finally{fs.rmSync(root,{recursive:true,force:true})}
 });
+
+test('profile aliases resolve before containment checks while external dependencies are rejected',()=>{
+  const owned=fs.mkdtempSync(path.join(os.tmpdir(),'suite-profile-alias-'));
+  try{
+    const root=path.join(owned,'profile'),alias=path.join(owned,'alias'),plugin=path.join(root,'node_modules/plugin');
+    fs.mkdirSync(plugin,{recursive:true});fs.writeFileSync(path.join(plugin,'package.json'),JSON.stringify({name:'plugin',version:'1.0.0'}));
+    fs.symlinkSync(root,alias,'junction');
+    assert.equal(auditPlugins(alias,['plugin']).plugins[0].version,'1.0.0');
+    const external=path.join(owned,'external');fs.mkdirSync(external);fs.writeFileSync(path.join(external,'package.json'),JSON.stringify({name:'external',version:'1.0.0'}));
+    fs.symlinkSync(external,path.join(root,'node_modules/external'),'junction');
+    fs.writeFileSync(path.join(plugin,'package.json'),JSON.stringify({name:'plugin',version:'1.0.0',dependencies:{external:'1.0.0'}}));
+    assert.throws(()=>auditPlugins(alias,['plugin']),/Dependency escapes profile/);
+  }finally{
+    if(path.dirname(path.resolve(owned))!==path.resolve(os.tmpdir()))throw Error('Unexpected test cleanup path');
+    fs.rmSync(owned,{recursive:true,force:true});
+  }
+});
