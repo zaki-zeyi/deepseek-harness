@@ -6,10 +6,12 @@ APP="${1:-$PWD/DeepSeek Harness Suite.app}"
 RES="$APP/Contents/Resources"
 BIN="$RES/dependencies/bin"
 echo "系统架构：$(uname -m)"
-for TOOL in codex bun lark-cli; do "$BIN/$TOOL" --version; done
+for TOOL in bun lark-cli; do "$BIN/$TOOL" --version; done
 "$BIN/mihomo" -v
 "$RES/runtime/primary-runtime/dependencies/node/bin/node" --version
-ELECTRON_RUN_AS_NODE=1 "$RES/dependencies/orb-electron/Electron.app/Contents/MacOS/Electron" -p 'process.versions.electron'
+if [[ -f "$RES/dependencies/orb-electron/Electron.app/Contents/MacOS/Electron" ]]; then
+  ELECTRON_RUN_AS_NODE=1 "$RES/dependencies/orb-electron/Electron.app/Contents/MacOS/Electron" -p 'process.versions.electron'
+fi
 if ! xcode-select -p >/dev/null 2>&1; then
   echo "Git 功能需要 Apple Command Line Tools，可运行：xcode-select --install"
 else /usr/bin/git --version; fi

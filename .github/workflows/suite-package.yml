@@ -15,6 +15,10 @@ on:
         description: Build and upload Windows only; skip the combined release job
         type: boolean
         default: false
+      macos_only:
+        description: Build Apple Silicon only without publishing a combined release
+        type: boolean
+        default: false
       macos_runner:
         description: Mac runner image; use macos-26 if macos-15 capacity is unavailable
         type: choice
@@ -38,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.windows_only && '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"}]' || '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"},{"target":"darwin-arm64","runner":"macos-15","shell":"bash"}]') }}
+        include: ${{ fromJSON(inputs.macos_only && '[{"target":"darwin-arm64","runner":"macos-26","shell":"bash"}]' || inputs.windows_only && '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"}]' || '[{"target":"win32-x64","runner":"windows-latest","shell":"pwsh"},{"target":"darwin-arm64","runner":"macos-15","shell":"bash"}]') }}
     defaults:
       run:
         working-directory: contrib/suite-builder
@@ -91,9 +95,8 @@ jobs:
       - name: Build native Mac package
         if: runner.os == 'macOS'
         run: |
-          python3 -u automation/build_macos.py ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
-          python3 -u automation/verify_macos.py ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
-          node automation/ci-mac-smoke.mjs ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
+          python3 -u automation/build_macos_native.py arm64
+          node automation/ci-mac-smoke.mjs arm64
       - name: Upload Windows installer
         if: runner.os == 'Windows' && steps.mode.outputs.publish == 'true'
         uses: actions/upload-artifact@v7.0.1
@@ -142,7 +145,7 @@ jobs:
   release:
     name: Publish community installers
     needs: package
-    if: github.event_name == 'workflow_dispatch' && inputs.publish_installers && !inputs.windows_only
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_installers && !inputs.windows_only && !inputs.macos_only
     runs-on: ubuntu-latest
     permissions:
       contents: write

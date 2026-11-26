@@ -37,7 +37,7 @@ export async function initializeSuite(resources,home,onProgress=()=>{}){
     if(!plan.length)return;
     for(const {name} of plan)if(!fs.existsSync(path.join(state.seed,'node_modules',name,'package.json')))throw Error('安装文件缺少插件 '+name+'，请重新安装应用');
     onProgress('正在注册 '+plan.length+' 个插件，保留已有账号和配置…');
-    const node=path.join(resources,'runtime/primary-runtime/dependencies/node/bin/node.exe');
+    const node=path.join(resources,'runtime/primary-runtime/dependencies/node/bin/'+(process.platform==='win32'?'node.exe':'node'));
     const pnpm=path.join(resources,'runtime/primary-runtime/dependencies/pnpm/bin/pnpm.mjs');
     const result=await runProfilePnpm({profile:'desktop',dir:state.profile,installAnchor:path.join(runtime,'package.json'),cwd:state.seed},
       ['add',...plan.map(p=>p.spec),'--offline','--ignore-scripts','--config.auto-install-peers=false'],
@@ -64,7 +64,7 @@ async function launchSetup(resources,home){
   let succeeded=false;
   try {
     await new Promise((resolve,reject)=>{
-      const child=spawn(path.join(resources,'runtime/primary-runtime/dependencies/node/bin/node.exe'),[fileURLToPath(import.meta.url),'--initialize-suite',resources,home],{windowsHide:true,stdio:['ignore','pipe','pipe','ipc']});
+      const child=spawn(path.join(resources,'runtime/primary-runtime/dependencies/node/bin/'+(process.platform==='win32'?'node.exe':'node')),[fileURLToPath(import.meta.url),'--initialize-suite',resources,home],{windowsHide:true,stdio:['ignore','pipe','pipe','ipc']});
       let output='';
       const collect=chunk=>{output=(output+chunk).slice(-8192)};child.stdout.on('data',collect);child.stderr.on('data',collect);
       child.on('message',message=>{if(typeof message?.text==='string'&&!window.isDestroyed())void window.webContents.executeJavaScript('document.getElementById("status").textContent='+JSON.stringify(message.text)).catch(collect)});

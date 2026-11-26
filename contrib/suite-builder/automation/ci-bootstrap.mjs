@@ -40,12 +40,12 @@ pkg.name='dsh-desktop-suite';pkg.productName='DeepSeek Harness Suite';pkg.versio
 pkg.dshDesktopAppId='com.deepseek.dsh.suite';pkg.dshSuite={core:core.version,plugins:[]};
 delete pkg.dshMandatoryUpdatePolicy;
 fs.writeFileSync(pkgFile,JSON.stringify(pkg,null,2)+'\n');
-const seedLoader=fs.readFileSync(path.join(root,'automation/templates',process.platform==='win32'?'seed-profile-windows.js':'seed-profile.js'));
+const seedLoader=fs.readFileSync(path.join(root,'automation/templates','seed-profile-windows.js'));
 fs.writeFileSync(path.join(payload,'lib/seed-profile.js'),seedLoader);
 const main=path.join(payload,'lib/main.js');
 const desktopSource=fs.readFileSync(main,'utf8');
 const {patchWindowsStartup}=await import('./windows-startup.mjs');
-fs.writeFileSync(main,process.platform==='win32'?patchWindowsStartup(desktopSource):'import "./seed-profile.js";\n'+desktopSource);
+fs.writeFileSync(main,patchWindowsStartup(desktopSource));
 const updateFile=path.join(resources,'app-update.yml');if(fs.existsSync(updateFile))fs.unlinkSync(updateFile);
 // The Windows builder extracts this patched archive into its own private staging.
 if(process.platform==='win32'){
@@ -74,6 +74,7 @@ for(const input of inputs){
     name=input.slice(5);const seed=pins.seedSources[name];
     if(!seed)throw Error(`No CI source for seed alias ${name}`);
     ({spec,version}=seed);
+    if(seed.sha256){const destination=path.join(root,'downloads',path.basename(new URL(spec).pathname));const response=await fetch(spec,{signal:AbortSignal.timeout(120000)});if(!response.ok)throw Error('Plugin download HTTP '+response.status);fs.writeFileSync(destination,Buffer.from(await response.arrayBuffer()));const {hash}=await import('./lib.mjs');if(await hash(destination)!==seed.sha256)throw Error('Plugin checksum mismatch');spec=destination;}
   }else if(input.startsWith('https://github.com/')){
     const slug=new URL(input).pathname.replace(/\/$/,'').replace(/\.git$/,'');
     const response=await fetch(`https://raw.githubusercontent.com${slug}/HEAD/package.json`,{signal:AbortSignal.timeout(60000)});
@@ -117,7 +118,7 @@ if(process.platform==='darwin'){
   const appendCore=path.join(scratch,'append-core');fs.mkdirSync(path.join(appendCore,'lib'),{recursive:true});
   for(const file of ['package.json','lib/main.js'])fs.copyFileSync(path.join(payload,file),path.join(appendCore,file));
   config['macApp'+key]=appendCore;config['macBaseline'+key]=baseline;
-  fs.rmSync(extracted,{recursive:true});
+  // Keep the manager's runtime anchor available for a size-triggered Orb removal.
 }
 fs.writeFileSync(path.join(root,'inputs.local.json'),JSON.stringify(config,null,2));
 console.log(`Prepared clean CI inputs for ${target}: ${plugins.length} plugins`);
