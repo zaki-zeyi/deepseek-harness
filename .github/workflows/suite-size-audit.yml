@@ -1,0 +1,59 @@
+name: Windows plugin size audit
+on:
+  push:
+    paths:
+      - .github/workflows/suite-size-audit.yml
+      - contrib/suite-builder/automation/audit-plugin-sizes.mjs
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DSH_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: contrib/suite-builder
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          github-token: ${{ github.token }}
+          run-id: '44065896948'
+          name: suite-win32-x64-10
+          path: size-input
+      - name: Install verified payload and measure plugins
+        run: |
+          node --test contrib/suite-builder/automation/audit-plugin-sizes.test.mjs
+          if($LASTEXITCODE -ne 0){throw 'Attribution tests failed'}
+          $package=Get-ChildItem size-input -Recurse -Filter *.exe | Select-Object -First 1
+          $reportFile=Get-ChildItem size-input -Recurse -Filter report.json | Select-Object -First 1
+          $report=Get-Content $reportFile.FullName -Raw | ConvertFrom-Json
+          if((Get-FileHash $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $report.sha256){throw 'Payload hash mismatch'}
+          $installed=Join-Path $env:RUNNER_TEMP ('dsh-size-'+$env:GITHUB_RUN_ID)
+          $engine=if($report.installerEngine){$report.installerEngine}else{'nsis'}
+          $env:DSH_HOME=Join-Path $env:RUNNER_TEMP ('dsh-size-home-'+$env:GITHUB_RUN_ID)
+          & ./contrib/suite-builder/automation/windows-install.ps1 -Installer $package.FullName -Destination $installed -Engine $engine -RequireFreshSuite
+          $resources=Join-Path $installed 'resources'
+          $profile=Join-Path $resources 'seed-profile'
+          if(!(Test-Path -LiteralPath $profile)){
+            $profile=Join-Path $env:RUNNER_TEMP ('dsh-profile-size-'+$env:GITHUB_RUN_ID)
+            & 'C:\Program Files\7-Zip\7z.exe' x -y ('-o'+$profile) (Join-Path $resources 'seed-profile.zip') | Out-Null
+            if($LASTEXITCODE -ne 0){throw 'Profile extraction failed'}
+          }
+          node contrib/suite-builder/automation/audit-plugin-sizes.mjs $resources $profile plugin-sizes.json
+          if($LASTEXITCODE -ne 0){throw 'Audit failed'}
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: windows-plugin-sizes
+          path: plugin-sizes.json
+          retention-days: 7

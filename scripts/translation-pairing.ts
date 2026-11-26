@@ -109,6 +109,7 @@ export interface TranslationPairingManifest {
 
 const README_ARTIFACT = /(?:^|\/)readme(?:\.md|\.zh\.md|\.i18n\.yaml)$/i
 const ROOT_PAIRED_DOCUMENT_ARTIFACT = /^(?:brand_guidelines|contributing|safety)(?:\.md|\.zh\.md|\.i18n\.yaml)$/i
+const SUITE_OUTPUT_TREES = ['build', 'dist', 'downloads'].map(name => `contrib/suite-builder/${name}/`)
 const NON_SOURCE_DIRECTORIES = new Set([
   'node_modules',
   'lib',
@@ -146,6 +147,7 @@ export const TRANSLATION_SCOPE_GLOB_EXCLUDES = [
   '.artifacts/**',
   'python/sdk-runtime/src/deepseek_harness_runtime/runtime/**',
   'vendor/**',
+  ...SUITE_OUTPUT_TREES.map(prefix => `${prefix}**`),
 ]
 
 /** Whether a repository-relative path belongs to a dependency or generated tree. */
@@ -157,6 +159,7 @@ function isTranslationSourceExcluded(file: string): boolean {
     || file.startsWith('apps/web/dist/')
     || file.startsWith('apps/cli/docs/')
     || file.startsWith('python/sdk-runtime/src/deepseek_harness_runtime/runtime/')
+    || SUITE_OUTPUT_TREES.some(prefix => file.startsWith(prefix))
 }
 
 /** Whether one discovered Markdown or sidecar path belongs to the bilingual source corpus. */

@@ -1,0 +1,34 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write contrib/suite-builder/README.md
+/:
+  en: 5e142bcf4bd73c63
+  zh: 591b7868443aa77c
+/community-suite-builder:
+  en: ee67b9bef598aabf
+  zh: c3f1bc2befbed9df
+/community-suite-builder/summary:
+  en: 4b38469c940e8733
+  zh: cc81f48963ef665d
+/community-suite-builder/table-of-contents:
+  en: b5792dc326fa314d
+  zh: 1a84cd3526d38f72
+/community-suite-builder/build-tutorial:
+  en: dec0a4b13fa1d0b6
+  zh: 6218ae43c02faa1a
+/community-suite-builder/runtime-rules:
+  en: 760ecacac43585b1
+  zh: 92cbd11c2653c078
+/community-suite-builder/model-experience:
+  en: 867b7d1c745ca258
+  zh: cd08ce10c7f5d6b7
+/community-suite-builder/known-limitations:
+  en: 78f3434f411768c8
+  zh: aad018026c68d882
+/community-suite-builder/developer-checks:
+  en: 2689ccda578dab48
+  zh: ea7edcaa5e272634
+/community-suite-builder/dev-note:
+  en: b75c8458928b72b9
+  zh: 45e76642489dcc3c

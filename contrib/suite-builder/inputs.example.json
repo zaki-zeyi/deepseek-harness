@@ -1,0 +1,9 @@
+{
+  "windowsApplication": "app-win",
+  "seedProfile": "seed-win",
+  "windowsStaging": "build/automated/example-successful-build",
+  "macAppArm64": "work/mac-arm64/app",
+  "macAppX64": "work/mac-x64/app",
+  "macBaselineArm64": "dist/DeepSeek-Harness-Suite-1.0.0-mac-arm64.zip",
+  "macBaselineX64": "dist/DeepSeek-Harness-Suite-1.0.0-mac-x64.zip"
+}

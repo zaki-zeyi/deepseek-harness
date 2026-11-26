@@ -1,0 +1,12 @@
+{
+  "name": "dsh-suite-builder",
+  "version": "1.0.0",
+  "description": "Build tooling for DeepSeek Harness Suite installers",
+  "private": true,
+  "license": "MIT",
+  "author": "DeepSeek Harness Suite",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron-builder": "^26.17.0"
+  }
+}
