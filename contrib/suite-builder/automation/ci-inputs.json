@@ -38,9 +38,9 @@
       "spec": "https://codeload.github.com/Ebony-Vinyl/dsh-our-free-model/tar.gz/9aa84122b95d80e734c27f05526262580a9c3b4d"
     },
     "dsh-industry-research": {
-      "version": "0.13.19",
-      "spec": "https://github.com/zaki-zeyi/dsh-industry-research/releases/download/v0.13.19/dsh-industry-research-0.13.19.tgz",
-      "sha256": "1ebd9858759df5e05cf86bac826347ad84093cdc349a5a6fb3437e0723f14763"
+      "version": "0.13.21",
+      "spec": "https://github.com/zaki-zeyi/dsh-industry-research/releases/download/v0.13.21/dsh-industry-research-0.13.21.tgz",
+      "sha256": "206bd406e78d0ed9bbee48f34ae341d6305160c9c90dd08a9611a4820931ba85"
     }
   }
 }
