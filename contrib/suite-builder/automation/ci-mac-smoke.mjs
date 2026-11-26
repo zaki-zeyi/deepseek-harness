@@ -9,7 +9,7 @@ assertRunner(`darwin-${arch}`);
 const version=JSON.parse(fs.readFileSync(path.join(root,'automation/runtime-rules.json'))).version;
 const out=path.join(root,`dist/automated/macos-${version}`);
 const archive=path.join(out,`DeepSeek-Harness-Suite-${version}-mac-${arch}.zip`);
-const unpacked=path.join(root,'build/mac-native-smoke');
+const unpacked=path.join(root,'build/macOS 自定义安装 验收');
 if(fs.existsSync(unpacked))throw Error('Smoke directory must be fresh');
 fs.mkdirSync(unpacked,{recursive:true});
 const extraction=await command('/usr/bin/ditto',['-x','-k',archive,unpacked]);
